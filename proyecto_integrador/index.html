@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galería de Arte - Inicio</title>
+    <!-- Enlace a la hoja de estilos principal -->
+    <link rel="stylesheet" href="public/css/style.css">
+    <!-- Enlaces CDN para jQuery y jQuery UI -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.13.2/themes/smoothness/jquery-ui.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"></script>
+    <!-- Enlace al archivo JavaScript principal de la aplicación -->
+    <script src="js/app.js" defer></script>
+</head>
+<body>
+    <header class="main-header">
+        <div class="header-content">
+            <div class="logo">
+                <img src="img/logo.png" alt="Logo Galería de Arte" onerror="this.onerror=null;this.src='https://placehold.co/100x50/cccccc/333333?text=LOGO';" class="logo-img">
+                <h1>Galería de Arte</h1>
+            </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="index.html" class="nav-link">Inicio</a></li>
+                    <li><a href="profile.html" class="nav-link">Mi Perfil</a></li>
+                    <li><a href="login.html" class="nav-link">Login / Registro</a></li>
+                </ul>
+            </nav>
+        </div>
+        <div class="search-filter-section">
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Buscar obras o artistas..." class="search-input">
+                <button id="searchButton" class="search-button">Buscar</button>
+            </div>
+            <div class="filters">
+                <select id="styleFilter" class="filter-select">
+                    <option value="">Todos los Estilos</option>
+                    <option value="Impresionismo">Impresionismo</option>
+                    <option value="Cubismo">Cubismo</option>
+                    <option value="Renacimiento">Renacimiento</option>
+                    <!-- Las opciones se cargarán dinámicamente desde el backend más adelante -->
+                </select>
+                <select id="artistFilter" class="filter-select">
+                    <option value="">Todos los Artistas</option>
+                    <!-- Las opciones se cargarán dinámicamente desde el backend más adelante -->
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="gallery-section">
+            <h2 class="section-title">Obras Destacadas</h2>
+            <div id="artworkGallery" class="artwork-grid">
+                <!-- Las obras de arte se cargarán aquí dinámicamente con JavaScript -->
+                <div class="loading-message" style="text-align: center; padding: 50px;">Cargando obras de arte...</div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="main-footer">
+        <p>&copy; 2025 Galería de Arte. Todos los derechos reservados.</p>
+    </footer>
+</body>
+</html>

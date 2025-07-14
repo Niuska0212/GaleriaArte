@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galería de Arte - Detalles de Obra</title>
+    <!-- Enlace a la hoja de estilos principal (ruta corregida) -->
+    <link rel="stylesheet" href="public/css/style.css">
+    <!-- Enlaces CDN para jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <!-- Enlace al archivo JavaScript de detalle de obra (ruta corregida) -->
+    <script src="public/js/artworkDetail.js" defer></script>
+</head>
+<body>
+    <header class="main-header">
+        <div class="header-content">
+            <div class="logo">
+                <img src="public/img/logo.png" alt="Logo Galería de Arte" onerror="this.onerror=null;this.src='https://placehold.co/100x50/cccccc/333333?text=LOGO';" class="logo-img">
+                <h1>Galería de Arte</h1>
+            </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="index.html" class="nav-link">Inicio</a></li>
+                    <li><a href="profile.html" class="nav-link">Mi Perfil</a></li>
+                    <li><a href="login.html" class="nav-link">Login / Registro</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container artwork-detail-container">
+        <section class="artwork-detail-section">
+            <div id="artworkDetailContent" class="artwork-detail-content">
+                <p class="loading-message">Cargando detalles de la obra...</p>
+                <!-- Los detalles de la obra se cargarán aquí dinámicamente -->
+            </div>
+
+            <div class="artwork-actions-detail">
+                <button id="likeButton" class="action-button like-button-detail">❤️ Me gusta (<span id="likeCount">0</span>)</button>
+                <button id="saveButton" class="action-button save-button-detail">⭐ Guardar en Favoritos</button>
+            </div>
+
+            <h3 class="section-subtitle">Comentarios</h3>
+            <div id="commentsSection" class="comments-section">
+                <div id="commentsList" class="comments-list">
+                    <p class="loading-message">Cargando comentarios...</p>
+                    <!-- Los comentarios se cargarán aquí dinámicamente -->
+                </div>
+
+                <form id="commentForm" class="comment-form">
+                    <h4>Añadir un Comentario</h4>
+                    <textarea id="commentText" placeholder="Escribe tu comentario aquí..." rows="4" required></textarea>
+                    <button type="submit" class="submit-button">Publicar Comentario</button>
+                    <div id="commentMessage" class="message-area"></div>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <footer class="main-footer">
+        <p>&copy; 2025 Galería de Arte. Todos los derechos reservados.</p>
+    </footer>
+</body>
+</html>
