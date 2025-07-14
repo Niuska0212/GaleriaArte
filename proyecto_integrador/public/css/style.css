@@ -77,8 +77,8 @@ body {
 }
 
 .nav-link:hover {
-    color: #d47738; /* Un azul sutil para el hover, como acento */
-    border-bottom: 2px solid #d47738;
+    color: #007bff; /* Un azul sutil para el hover, como acento */
+    border-bottom: 2px solid #007bff;
 }
 
 /* --- Sección de Búsqueda y Filtros --- */
@@ -114,12 +114,12 @@ body {
 
 .search-input:focus {
     outline: none;
-    border-color: #d47738;
+    border-color: #007bff;
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
 .search-button {
-    background-color: #d47738;
+    background-color: #007bff;
     color: white;
     padding: 10px 20px;
     border: none;
@@ -131,7 +131,7 @@ body {
 }
 
 .search-button:hover {
-    background-color: #9b4c1f;
+    background-color: #0056b3;
     transform: translateY(-1px); /* Efecto de elevación sutil */
 }
 
@@ -153,7 +153,7 @@ body {
 }
 
 .filter-select:hover {
-    border-color: #d47738;
+    border-color: #007bff;
 }
 
 /* --- Sección de la Galería --- */
@@ -231,7 +231,7 @@ body {
 .action-button {
     background: none;
     border: none;
-    color: #d47738;
+    color: #007bff;
     cursor: pointer;
     font-size: 1em;
     transition: color 0.3s ease, transform 0.2s ease;
@@ -241,7 +241,7 @@ body {
 }
 
 .action-button:hover {
-    color: #9b4c1f;
+    color: #0056b3;
     transform: translateY(-1px);
 }
 
@@ -296,14 +296,14 @@ body {
 /* Estilos para jQuery UI (si se usan componentes específicos como Datepicker, Autocomplete, etc.) */
 /* Estos estilos son básicos y se pueden personalizar */
 .ui-widget-header {
-    background: #d47738;
-    border: 1px solid #9b4c1f;
+    background: #007bff;
+    border: 1px solid #0056b3;
     color: #fff;
     font-weight: bold;
     border-radius: 5px 5px 0 0;
 }
 .ui-state-active, .ui-widget-content .ui-state-active, .ui-widget-header .ui-state-active {
-    background: #9b4c1f;
+    background: #0056b3;
     color: #fff;
 }
 .ui-datepicker {
@@ -311,14 +311,14 @@ body {
 }
 
 /* --- Estilos específicos para Login y Perfil --- */
-.auth-container, .profile-container {
+.auth-container, .profile-container, .upload-container { /* Añadido .upload-container */
     display: flex;
     justify-content: center;
     align-items: flex-start; /* Alinea arriba para evitar que se centre verticalmente demasiado */
     padding-top: 40px; /* Espacio desde el header */
 }
 
-.auth-section, .profile-section {
+.auth-section, .profile-section, .upload-section { /* Añadido .upload-section */
     background-color: #ffffff;
     border-radius: 10px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
@@ -353,7 +353,7 @@ body {
 }
 
 .toggle-button.active {
-    background-color: #d47738;
+    background-color: #007bff;
     color: white;
     box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
 }
@@ -362,7 +362,7 @@ body {
     background-color: #e0e0e0;
 }
 
-.auth-form {
+.auth-form, .upload-form { /* Añadido .upload-form */
     display: flex;
     flex-direction: column;
     gap: 15px;
@@ -386,7 +386,10 @@ body {
 
 .form-group input[type="text"],
 .form-group input[type="email"],
-.form-group input[type="password"] {
+.form-group input[type="password"],
+.form-group input[type="number"], /* Añadido para input type number */
+.form-group input[type="file"],   /* Añadido para input type file */
+.form-group textarea {             /* Añadido para textarea */
     width: 100%;
     padding: 12px;
     border: 1px solid #ddd;
@@ -397,14 +400,24 @@ body {
 
 .form-group input[type="text"]:focus,
 .form-group input[type="email"]:focus,
-.form-group input[type="password"]:focus {
+.form-group input[type="password"]:focus,
+.form-group input[type="number"]:focus,
+.form-group input[type="file"]:focus,
+.form-group textarea:focus {
     outline: none;
-    border-color: #d47738;
+    border-color: #007bff;
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
 }
 
+.form-group small { /* Estilo para texto de ayuda */
+    display: block;
+    margin-top: 5px;
+    font-size: 0.85em;
+    color: #777;
+}
+
 .submit-button {
-    background-color: #d47738;
+    background-color: #007bff;
     color: white;
     padding: 12px 25px;
     border: none;
@@ -417,7 +430,7 @@ body {
 }
 
 .submit-button:hover {
-    background-color: #9b4c1f;
+    background-color: #0056b3;
     transform: translateY(-2px);
 }
 
@@ -574,16 +587,16 @@ body {
     font-weight: 600;
     border-radius: 8px;
     transition: background-color 0.3s ease, transform 0.2s ease, color 0.3s ease;
-    border: 2px solid #d47738; /* Borde para los botones de acción */
+    border: 2px solid #007bff; /* Borde para los botones de acción */
     background-color: #fff;
-    color: #d47738;
+    color: #007bff;
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
 .like-button-detail:hover, .save-button-detail:hover {
-    background-color: #d47738;
+    background-color: #007bff;
     color: white;
     transform: translateY(-2px);
 }
@@ -687,7 +700,7 @@ body {
 
 .comment-form textarea:focus {
     outline: none;
-    border-color: #d47738;
+    border-color: #007bff;
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
 }
 
