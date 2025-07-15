@@ -4,8 +4,8 @@
 // Establece las cabeceras para permitir CORS y especificar el tipo de contenido JSON
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: POST, OPTIONS"); // Solo POST para login/registro
-header("Access-Control-Max-Age: 3600"); // Cache preflight request por 1 hora
+header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
 // Si es una petición OPTIONS (preflight), responde con 200 OK
@@ -14,15 +14,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// Incluye la clase de la base de datos y el controlador de autenticación
-require_once __DIR__ . '/../models/Database.php';
+// Incluye la clase Database desde config/database.php
+require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../controllers/AuthController.php';
 
-// Crea una instancia de la base de datos
-$database = new Database();
-$db = $database->getConnection();
+// Obtiene la conexión a la base de datos
+$database = new Database(); // Instancia la clase Database
+$db = $database->getConnection(); // Obtiene la conexión PDO
 
-// Crea una instancia del controlador de autenticación
+// Crea una instancia del controlador de autenticación, pasándole la conexión PDO
 $authController = new AuthController($db);
 
 // Obtiene los datos de la petición (JSON)
@@ -89,6 +89,5 @@ switch ($data->action) {
         break;
 }
 
-// Cierra la conexión a la base de datos
-$database->closeConnection();
+// No es necesario cerrar la conexión explícitamente aquí, ya que PDO lo maneja automáticamente al finalizar el script.
 ?>

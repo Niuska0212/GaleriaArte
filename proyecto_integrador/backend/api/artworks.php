@@ -13,14 +13,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// Incluye la clase de la base de datos y los controladores
-require_once __DIR__ . '/../models/Database.php';
+// Incluye la clase Database desde config/database.php y los controladores
+require_once __DIR__ . '/../config/database.php'; // Ahora incluye la clase Database
 require_once __DIR__ . '/../controllers/ArtworkController.php';
 require_once __DIR__ . '/../controllers/AuthController.php'; // Para validar el token
 
-// Crea instancias de la base de datos y controladores
-$database = new Database();
-$db = $database->getConnection();
+// Obtiene la conexión a la base de datos
+$database = new Database(); // Instancia la clase Database
+$db = $database->getConnection(); // Obtiene la conexión PDO
+
+// Crea instancias de los controladores, pasándoles la conexión PDO
 $artworkController = new ArtworkController($db);
 $authController = new AuthController($db);
 
@@ -116,6 +118,7 @@ switch ($request_method) {
         }
 
         // Determinar si es una subida de archivo (multipart/form-data) o un JSON (toggle_like)
+        // $_POST estará poblado para multipart/form-data, file_get_contents("php://input") para JSON
         $input_data = json_decode(file_get_contents("php://input"), true); // Intenta decodificar JSON
 
         if (isset($input_data['action']) && $input_data['action'] === 'toggle_like') {
@@ -174,6 +177,5 @@ switch ($request_method) {
         break;
 }
 
-// Cierra la conexión a la base de datos
-$database->closeConnection();
+// No es necesario cerrar la conexión explícitamente aquí, PDO lo maneja.
 ?>

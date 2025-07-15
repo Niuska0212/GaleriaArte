@@ -1,13 +1,14 @@
 <?php
 // backend/controllers/AuthController.php
 
-require_once __DIR__ . '/../models/Database.php';
+// Ya no necesitamos requerir Database.php aquí, solo se usa la conexión PDO que se pasa.
 
 class AuthController {
     private $conn;
     private $table_name = "users";
 
-    public function __construct($db) {
+    // El constructor ahora recibe directamente la conexión PDO
+    public function __construct(PDO $db) {
         $this->conn = $db;
     }
 
@@ -31,8 +32,8 @@ class AuthController {
         $stmt = $this->conn->prepare($query);
 
         // Limpiar y enlazar parámetros
-        $username = htmlspecialchars(strip_tags(trim($username))); // Añadido trim()
-        $email = htmlspecialchars(strip_tags(trim($email)));     // Añadido trim()
+        $username = htmlspecialchars(strip_tags(trim($username)));
+        $email = htmlspecialchars(strip_tags(trim($email)));
 
         $stmt->bindParam(":username", $username);
         $stmt->bindParam(":email", $email);
@@ -58,12 +59,12 @@ class AuthController {
      */
     public function login($identifier, $password) {
         // Limpiar el identificador (username o email)
-        $identifier = htmlspecialchars(strip_tags(trim($identifier))); // Añadido trim()
+        $identifier = htmlspecialchars(strip_tags(trim($identifier)));
 
         // Buscar usuario por username o email
         $query = "SELECT id, username, email, password_hash, created_at FROM " . $this->table_name . " WHERE username = :identifier OR email = :identifier LIMIT 0,1";
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":identifier", $identifier); // Usar el mismo valor para buscar en ambos campos
+        $stmt->bindParam(":identifier", $identifier);
 
         try {
             $stmt->execute();
@@ -73,8 +74,7 @@ class AuthController {
                 // Usuario encontrado, verificar contraseña
                 if (password_verify($password, $user['password_hash'])) {
                     // Contraseña correcta, generar token (simulado por ahora, luego JWT)
-                    // En una aplicación real, aquí generarías un JWT seguro.
-                    $token = bin2hex(random_bytes(32)); // Token hexadecimal para depuración
+                    $token = bin2hex(random_bytes(32));
 
                     return [
                         "success" => true,
@@ -85,7 +85,7 @@ class AuthController {
                             "email" => $user['email'],
                             "created_at" => $user['created_at']
                         ],
-                        "token" => $token // Este token es solo un placeholder, usar JWT real
+                        "token" => $token
                     ];
                 } else {
                     // Contraseña incorrecta
@@ -119,24 +119,17 @@ class AuthController {
             return $stmt->rowCount() > 0;
         } catch (PDOException $e) {
             error_log("Error de base de datos en userExists: " . $e->getMessage());
-            return false; // Asumir que no existe en caso de error de DB
+            return false;
         }
     }
 
     /**
-     * Valida un token de autenticación.
-     * En una aplicación real, esto decodificaría y validaría un JWT.
-     * Por ahora, solo simula una validación.
+     * Valida un token de autenticación (simulado).
      * @param string $token El token a validar.
      * @return int|false El ID del usuario si el token es válido, false en caso contrario.
      */
     public function validateToken($token) {
-        // Implementación de validación de JWT real iría aquí.
-        // Por ahora, es un placeholder.
-        // Podrías tener una tabla de tokens para validación simple si no usas JWT.
-        // Para fines de este ejemplo, si el token existe y no está vacío, lo consideramos "válido".
-        // ¡ADVERTENCIA! Esto NO es seguro para producción.
-        if (!empty($token) && strlen($token) > 10) { // Añadida una longitud mínima para evitar tokens vacíos/cortos
+        if (!empty($token) && strlen($token) > 10) {
             return true;
         }
         return false;

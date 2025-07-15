@@ -14,14 +14,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// Incluye las clases necesarias
-require_once __DIR__ . '/../models/Database.php';
+// Incluye la clase Database desde config/database.php y los controladores
+require_once __DIR__ . '/../config/database.php'; // Ahora incluye la clase Database
 require_once __DIR__ . '/../controllers/AuthController.php'; // Para validar el token
 require_once __DIR__ . '/../controllers/CommentController.php';
 
-// Crea instancias de la base de datos y controladores
-$database = new Database();
-$db = $database->getConnection();
+// Obtiene la conexión a la base de datos
+$database = new Database(); // Instancia la clase Database
+$db = $database->getConnection(); // Obtiene la conexión PDO
+
+// Crea instancias de los controladores
 $authController = new AuthController($db);
 $commentController = new CommentController($db);
 
@@ -95,6 +97,5 @@ switch ($request_method) {
         break;
 }
 
-// Cierra la conexión a la base de datos
-$database->closeConnection();
+// No es necesario cerrar la conexión explícitamente aquí.
 ?>

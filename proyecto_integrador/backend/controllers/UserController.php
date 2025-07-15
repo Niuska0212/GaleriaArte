@@ -1,7 +1,7 @@
 <?php
 // backend/controllers/UserController.php
 
-require_once __DIR__ . '/../models/Database.php';
+// Ya no necesitamos requerir Database.php aquí, solo se usa la conexión PDO que se pasa.
 
 class UserController {
     private $conn;
@@ -9,7 +9,8 @@ class UserController {
     private $artworks_table = "artworks";
     private $favorites_table = "favorites";
 
-    public function __construct($db) {
+    // El constructor ahora recibe directamente la conexión PDO
+    public function __construct(PDO $db) {
         $this->conn = $db;
     }
 
@@ -19,7 +20,7 @@ class UserController {
      * @return array|false Datos del usuario o false si no se encuentra.
      */
     public function getUserById($userId) {
-        $query = "SELECT id, username, email, created_at FROM " . $this->users_table . " WHERE id = :id LIMIT 0,1";
+        $query = "SELECT id, username, email, profile_image_url, created_at FROM " . $this->users_table . " WHERE id = :id LIMIT 0,1";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $userId, PDO::PARAM_INT);
         $stmt->execute();
@@ -28,7 +29,7 @@ class UserController {
 
         // No devolver el password_hash
         if ($user) {
-            unset($user['password_hash']);
+            // La columna password_hash ya no se selecciona, así que no es necesario unset
             return $user;
         }
         return false;
@@ -103,6 +104,19 @@ class UserController {
         return ["success" => false, "message" => "Error al eliminar de favoritos."];
     }
 
-    // Aquí se pueden añadir más métodos para actualizar perfil, cambiar contraseña, etc.
+    /**
+     * Verifica si una obra de arte es favorita para un usuario.
+     * @param int $userId ID del usuario.
+     * @param int $artworkId ID de la obra de arte.
+     * @return bool True si es favorita, false en caso contrario.
+     */
+    public function checkFavoriteStatus($userId, $artworkId) {
+        $query = "SELECT COUNT(*) FROM " . $this->favorites_table . " WHERE user_id = :user_id AND artwork_id = :artwork_id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchColumn() > 0;
+    }
 }
 ?>

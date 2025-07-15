@@ -1,7 +1,7 @@
 <?php
 // backend/api/users.php
 
-
+// Establece las cabeceras para permitir CORS y especificar el tipo de contenido JSON
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS"); // GET para perfil, POST para añadir/quitar favoritos
@@ -14,14 +14,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// Incluye las clases necesarias
-require_once __DIR__ . '/../models/Database.php';
+// Incluye la clase Database desde config/database.php y los controladores
+require_once __DIR__ . '/../config/database.php'; // Ahora incluye la clase Database
 require_once __DIR__ . '/../controllers/AuthController.php'; // Para validar el token
 require_once __DIR__ . '/../controllers/UserController.php';
 
-// Crea instancias de la base de datos y controladores
-$database = new Database();
-$db = $database->getConnection();
+// Obtiene la conexión a la base de datos
+$database = new Database(); // Instancia la clase Database
+$db = $database->getConnection(); // Obtiene la conexión PDO
+
+// Crea instancias de los controladores
 $authController = new AuthController($db);
 $userController = new UserController($db);
 
@@ -68,6 +70,18 @@ switch ($request_method) {
                     http_response_code(404);
                     echo json_encode(["message" => "No se encontraron favoritos para este usuario."]);
                 }
+            } elseif (isset($_GET["action"]) && $_GET["action"] === "check_favorite") {
+                // Verificar si una obra es favorita para un usuario
+                if (empty($_GET['artwork_id']) || empty($_GET['user_id'])) {
+                    http_response_code(400);
+                    echo json_encode(["message" => "Faltan IDs para verificar favorito."]);
+                    exit();
+                }
+                $artworkId = intval($_GET['artwork_id']);
+                $userId = intval($_GET['user_id']);
+                $isFavorite = $userController->checkFavoriteStatus($userId, $artworkId);
+                http_response_code(200);
+                echo json_encode(["is_favorite" => $isFavorite]);
             } else {
                 // Obtener datos del perfil del usuario
                 $user = $userController->getUserById($userId);
@@ -128,6 +142,5 @@ switch ($request_method) {
         break;
 }
 
-// Cierra la conexión a la base de datos
-$database->closeConnection();
+// No es necesario cerrar la conexión explícitamente aquí.
 ?>

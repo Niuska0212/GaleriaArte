@@ -1,14 +1,15 @@
 <?php
 // backend/controllers/CommentController.php
 
-require_once __DIR__ . '/../models/Database.php';
+// Ya no necesitamos requerir Database.php aquí, solo se usa la conexión PDO que se pasa.
 
 class CommentController {
     private $conn;
     private $comments_table = "comments";
     private $users_table = "users"; // Para obtener el nombre de usuario
 
-    public function __construct($db) {
+    // El constructor ahora recibe directamente la conexión PDO
+    public function __construct(PDO $db) {
         $this->conn = $db;
     }
 
@@ -42,16 +43,21 @@ class CommentController {
         $query = "INSERT INTO " . $this->comments_table . " (artwork_id, user_id, comment_text) VALUES (:artwork_id, :user_id, :comment_text)";
         $stmt = $this->conn->prepare($query);
 
-        $commentText = htmlspecialchars(strip_tags($commentText)); // Limpiar el texto
+        $commentText = htmlspecialchars(strip_tags(trim($commentText))); // Limpiar y trim() el texto
 
         $stmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
         $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
         $stmt->bindParam(':comment_text', $commentText);
 
-        if ($stmt->execute()) {
-            return ["success" => true, "message" => "Comentario añadido exitosamente."];
+        try {
+            if ($stmt->execute()) {
+                return ["success" => true, "message" => "Comentario añadido exitosamente."];
+            }
+        } catch (PDOException $e) {
+            error_log("Error de base de datos al añadir comentario: " . $e->getMessage());
+            return ["success" => false, "message" => "Error interno del servidor al añadir el comentario."];
         }
-        return ["success" => false, "message" => "Error al añadir el comentario."];
+        return ["success" => false, "message" => "No se pudo añadir el comentario."];
     }
 
     // Aquí se pueden añadir métodos para actualizar o eliminar comentarios (con validación de usuario)

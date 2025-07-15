@@ -11,8 +11,6 @@ GaleriaArte/
 │   │   ├── ArtworkController.php← Lógica para obras de arte (CRUD, likes, favoritos)
 │   │   ├── UserController.php   ← Lógica para usuarios (perfil, gestión)
 │   │   └── CommentController.php← Lógica para comentarios
-│   ├── models/
-│   │   └── Database.php         ← Clase para gestionar la conexión y consultas SQL
 │   ├── api/
 │   │   ├── auth.php             ← Endpoints para autenticación
 │   │   ├── artworks.php         ← Endpoints para obras de arte
@@ -32,8 +30,6 @@ GaleriaArte/
 │   │   ├── profile.js           ← Gestión de perfil y favoritos (interacción con PHP)
 │   │   ├── artworkDetail.js     ← Lógica para la página de detalle de obra (likes, comentarios)
 │   │   └── upload.js            ← Lógica para subir nuevas obras de arte
-│   │   └── lib/                 ← Opcional: para librerías de terceros (ej. jQuery)
-│   │       └── jquery-3.7.1.min.js
 │   ├── img/                     ← Imágenes de obras, logos, iconos
 │   │   └── logo.png
 │   │   └── uploaded_artworks/   ← Directorio para las imágenes de obras subidas por usuarios

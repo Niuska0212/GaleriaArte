@@ -1,15 +1,21 @@
 <?php
 // backend/controllers/ArtworkController.php
 
-require_once __DIR__ . '/../models/Database.php';
+// Ya no necesitamos requerir Database.php aquí, solo se usa la conexión PDO que se pasa.
 
 class ArtworkController {
     private $conn;
     private $artworks_table = "artworks";
     private $likes_table = "likes";
+    private $upload_dir = __DIR__ . '/../../public/img/uploaded_artworks/'; // Directorio para guardar imágenes subidas
 
-    public function __construct($db) {
+    // El constructor ahora recibe directamente la conexión PDO
+    public function __construct(PDO $db) {
         $this->conn = $db;
+        // Asegurarse de que el directorio de subida exista
+        if (!is_dir($this->upload_dir)) {
+            mkdir($this->upload_dir, 0777, true); // Crea el directorio con permisos de escritura
+        }
     }
 
     /**
@@ -68,6 +74,83 @@ class ArtworkController {
         $stmt->execute();
 
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Añade una nueva obra de arte, incluyendo la subida del archivo de imagen.
+     * @param array $data Datos de la obra (title, artist_name, description, style, creation_year, owner_id).
+     * @param array $file_data Datos del archivo de imagen subido ($_FILES['artwork_image']).
+     * @return array Resultado de la operación (success, message, artwork_id, image_url).
+     */
+    public function addArtwork($data, $file_data) {
+        // Validar datos básicos
+        if (empty($data['title']) || empty($data['artist_name']) || empty($file_data['name'])) {
+            return ["success" => false, "message" => "Título, artista e imagen son campos obligatorios."];
+        }
+
+        // Validar y mover la imagen
+        $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+        $max_size = 5 * 1024 * 1024; // 5 MB
+
+        if (!in_array($file_data['type'], $allowed_types)) {
+            return ["success" => false, "message" => "Tipo de archivo no permitido. Solo JPG, PNG, GIF."];
+        }
+        if ($file_data['size'] > $max_size) {
+            return ["success" => false, "message" => "El tamaño del archivo excede el límite de 5MB."];
+        }
+        if ($file_data['error'] !== UPLOAD_ERR_OK) {
+            return ["success" => false, "message" => "Error al subir el archivo: " . $file_data['error']];
+        }
+
+        $file_extension = pathinfo($file_data['name'], PATHINFO_EXTENSION);
+        $new_file_name = uniqid('artwork_', true) . '.' . $file_extension;
+        $destination_path = $this->upload_dir . $new_file_name;
+        $image_url_for_db = 'public/img/uploaded_artworks/' . $new_file_name; // Ruta relativa para la DB y el frontend
+
+        if (!move_uploaded_file($file_data['tmp_name'], $destination_path)) {
+            return ["success" => false, "message" => "No se pudo mover el archivo subido al directorio de destino. Verifique permisos."];
+        }
+
+        // Insertar datos en la base de datos
+        $query = "INSERT INTO " . $this->artworks_table . " (title, artist_name, description, image_url, creation_year, style, owner_id)
+                  VALUES (:title, :artist_name, :description, :image_url, :creation_year, :style, :owner_id)";
+        $stmt = $this->conn->prepare($query);
+
+        // Limpiar y enlazar parámetros
+        $title = htmlspecialchars(strip_tags(trim($data['title'])));
+        $artist_name = htmlspecialchars(strip_tags(trim($data['artist_name'])));
+        $description = isset($data['description']) ? htmlspecialchars(strip_tags(trim($data['description']))) : null;
+        $style = isset($data['style']) ? htmlspecialchars(strip_tags(trim($data['style']))) : null;
+        $creation_year = isset($data['creation_year']) && is_numeric($data['creation_year']) ? intval($data['creation_year']) : null;
+        $owner_id = isset($data['owner_id']) && is_numeric($data['owner_id']) ? intval($data['owner_id']) : null;
+
+        $stmt->bindParam(":title", $title);
+        $stmt->bindParam(":artist_name", $artist_name);
+        $stmt->bindParam(":description", $description);
+        $stmt->bindParam(":image_url", $image_url_for_db);
+        $stmt->bindParam(":creation_year", $creation_year, PDO::PARAM_INT);
+        $stmt->bindParam(":style", $style);
+        $stmt->bindParam(":owner_id", $owner_id, PDO::PARAM_INT);
+
+        try {
+            if ($stmt->execute()) {
+                return [
+                    "success" => true,
+                    "message" => "Obra de arte subida exitosamente.",
+                    "artwork_id" => $this->conn->lastInsertId(),
+                    "image_url" => $image_url_for_db
+                ];
+            }
+        } catch (PDOException $e) {
+            // Si hay un error en la DB, intentar eliminar el archivo subido
+            if (file_exists($destination_path)) {
+                unlink($destination_path);
+            }
+            error_log("Error de base de datos al añadir obra: " . $e->getMessage());
+            return ["success" => false, "message" => "Error interno del servidor al guardar la obra."];
+        }
+
+        return ["success" => false, "message" => "No se pudo subir la obra de arte."];
     }
 
     /**
@@ -146,6 +229,26 @@ class ArtworkController {
         return $stmt->fetchColumn();
     }
 
-    // Aquí se pueden añadir métodos para crear, actualizar, eliminar obras de arte.
+    /**
+     * Obtiene una lista de todos los estilos de obras de arte únicos.
+     * @return array Array de estilos.
+     */
+    public function getAllStyles() {
+        $query = "SELECT DISTINCT style FROM " . $this->artworks_table . " WHERE style IS NOT NULL AND style != '' ORDER BY style ASC";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_COLUMN, 0); // Devuelve un array simple de valores
+    }
+
+    /**
+     * Obtiene una lista de todos los nombres de artistas únicos.
+     * @return array Array de nombres de artistas.
+     */
+    public function getAllArtists() {
+        $query = "SELECT DISTINCT artist_name FROM " . $this->artworks_table . " WHERE artist_name IS NOT NULL AND artist_name != '' ORDER BY artist_name ASC";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_COLUMN, 0); // Devuelve un array simple de valores
+    }
 }
 ?>
