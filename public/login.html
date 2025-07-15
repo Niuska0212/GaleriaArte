@@ -1,15 +1,11 @@
 <!DOCTYPE html>
-<!--/proyecto_integrador/public/login.html-->
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Galería de Arte - Login / Registro</title>
-    <!-- Enlace a la hoja de estilos principal (ruta corregida) -->
     <link rel="stylesheet" href="css/style.css">
-    <!-- Enlaces CDN para jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- Enlace al archivo JavaScript de autenticación (ruta corregida) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="js/auth.js" defer></script>
 </head>
 <body>
@@ -23,7 +19,8 @@
                 <ul>
                     <li><a href="index.html" class="nav-link">Inicio</a></li>
                     <li><a href="profile.html" class="nav-link">Mi Perfil</a></li>
-                    <li><a href="login.html" class="nav-link">Login / Registro</a></li>
+                    <li><a href="upload.html" class="nav-link">Subir Obra</a></li>
+                    <li id="authNavLinkContainer"><a href="login.html" id="authNavLink" class="nav-link">Login / Registro</a></li>
                 </ul>
             </nav>
         </div>
@@ -32,21 +29,21 @@
     <main class="container auth-container">
         <section class="auth-section">
             <h2 class="section-title">Acceder a tu Cuenta</h2>
-            <div class="auth-forms">
-                <div class="form-toggle">
-                    <button id="showLogin" class="toggle-button active">Iniciar Sesión</button>
-                    <button id="showRegister" class="toggle-button">Registrarse</button>
-                </div>
+            <div class="form-toggle">
+                <button id="showLogin" class="toggle-button active">Iniciar Sesión</button>
+                <button id="showRegister" class="toggle-button">Registrarse</button>
+            </div>
 
-                <!-- Formulario de Inicio de Sesión -->
+            <div class="auth-forms">
+                <!-- Formulario de Login -->
                 <form id="loginForm" class="auth-form active">
                     <div class="form-group">
                         <label for="loginUsername">Nombre de Usuario o Email:</label>
-                        <input type="text" id="loginUsername" name="username" required autocomplete="username">
+                        <input type="text" id="loginUsername" name="username" required>
                     </div>
                     <div class="form-group">
                         <label for="loginPassword">Contraseña:</label>
-                        <input type="password" id="loginPassword" name="password" required autocomplete="current-password">
+                        <input type="password" id="loginPassword" name="password" required>
                     </div>
                     <button type="submit" class="submit-button">Iniciar Sesión</button>
                     <div id="loginMessage" class="message-area"></div>
@@ -56,19 +53,19 @@
                 <form id="registerForm" class="auth-form hidden">
                     <div class="form-group">
                         <label for="registerUsername">Nombre de Usuario:</label>
-                        <input type="text" id="registerUsername" name="username" required autocomplete="new-username">
+                        <input type="text" id="registerUsername" name="username" required>
                     </div>
                     <div class="form-group">
                         <label for="registerEmail">Email:</label>
-                        <input type="email" id="registerEmail" name="email" required autocomplete="email">
+                        <input type="email" id="registerEmail" name="email" required>
                     </div>
                     <div class="form-group">
                         <label for="registerPassword">Contraseña:</label>
-                        <input type="password" id="registerPassword" name="password" required autocomplete="new-password">
+                        <input type="password" id="registerPassword" name="password" required>
                     </div>
                     <div class="form-group">
                         <label for="registerConfirmPassword">Confirmar Contraseña:</label>
-                        <input type="password" id="registerConfirmPassword" name="confirm_password" required autocomplete="new-password">
+                        <input type="password" id="registerConfirmPassword" name="confirm_password" required>
                     </div>
                     <button type="submit" class="submit-button">Registrarse</button>
                     <div id="registerMessage" class="message-area"></div>

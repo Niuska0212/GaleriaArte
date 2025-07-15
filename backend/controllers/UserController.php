@@ -2,7 +2,7 @@
 // backend/controllers/UserController.php (Procedural)
 
 /**
- * Maneja las peticiones GET para usuarios (perfil, favoritos, check favorito).
+ * Maneja las peticiones GET para usuarios (perfil, favoritos, check favorito, obras subidas).
  * @param PDO $conn Conexión a la base de datos.
  * @param array $params Parámetros GET.
  */
@@ -33,6 +33,15 @@ function handleUserGetRequest(PDO $conn, $params) {
         $isFavorite = checkFavoriteStatusFunc($conn, $userId, $artworkId);
         http_response_code(200);
         echo json_encode(["is_favorite" => $isFavorite]);
+    } elseif (isset($params["action"]) && $params["action"] === "uploaded_artworks") { // Nuevo: Obras subidas
+        $uploadedArtworks = getUserUploadedArtworksFunc($conn, $userId);
+        if ($uploadedArtworks !== false) {
+            http_response_code(200);
+            echo json_encode($uploadedArtworks);
+        } else {
+            http_response_code(404);
+            echo json_encode(["message" => "No se encontraron obras subidas por este usuario."]);
+        }
     } else {
         $user = getUserByIdFunc($conn, $userId);
         if ($user) {
@@ -61,7 +70,7 @@ function handleUserPostRequest(PDO $conn, $data) {
     $artworkId = intval($data['artworkId']);
 
     if ($data['action'] === "add_favorite") {
-        $result = addFavoriteArtworkFunc($conn, $userId, $artworkId);
+        $result = addFavoriteArtworkFunc($userId, $artworkId);
         if ($result['success']) {
             http_response_code(200);
             echo json_encode(["message" => $result['message']]);
@@ -70,7 +79,7 @@ function handleUserPostRequest(PDO $conn, $data) {
             echo json_encode(["message" => $result['message']]);
         }
     } elseif ($data['action'] === "remove_favorite") {
-        $result = removeFavoriteArtworkFunc($conn, $userId, $artworkId);
+        $result = removeFavoriteArtworkFunc($userId, $artworkId);
         if ($result['success']) {
             http_response_code(200);
             echo json_encode(["message" => $result['message']]);
@@ -121,6 +130,26 @@ function getUserFavoriteArtworksFunc(PDO $conn, $userId) {
 }
 
 /**
+ * Obtiene las obras de arte subidas por un usuario.
+ * @param PDO $conn Conexión a la base de datos.
+ * @param int $userId ID del usuario.
+ * @return array Un array de obras de arte subidas.
+ */
+function getUserUploadedArtworksFunc(PDO $conn, $userId) { // Nueva función
+    $artworks_table = "artworks";
+
+    $query = "SELECT id, title, artist_name, image_url, style, creation_year
+              FROM " . $artworks_table . "
+              WHERE owner_id = :user_id
+              ORDER BY created_at DESC";
+    $stmt = $conn->prepare($query);
+    $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+
+/**
  * Añade una obra de arte a los favoritos de un usuario.
  * @param PDO $conn Conexión a la base de datos.
  * @param int $userId ID del usuario.
@@ -168,7 +197,7 @@ function removeFavoriteArtworkFunc(PDO $conn, $userId, $artworkId) {
     if ($stmt->execute()) {
         if ($stmt->rowCount() > 0) {
             return ["success" => true, "message" => "Obra eliminada de favoritos."];
-        } else {
+            } else {
             return ["success" => false, "message" => "La obra no estaba en tus favoritos o no se pudo encontrar."];
         }
     }

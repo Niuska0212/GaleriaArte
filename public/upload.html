@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!--/proyecto_integrador/public/upload.html-->
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -7,7 +6,7 @@
     <title>Galería de Arte - Subir Obra</title>
     <link rel="stylesheet" href="css/style.css">
     <!-- Enlaces CDN para jQuery -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <!-- Enlace al archivo JavaScript de subida de obra -->
     <script src="js/upload.js" defer></script>
 </head>
@@ -23,7 +22,7 @@
                     <li><a href="index.html" class="nav-link">Inicio</a></li>
                     <li><a href="profile.html" class="nav-link">Mi Perfil</a></li>
                     <li><a href="upload.html" class="nav-link">Subir Obra</a></li>
-                    <li><a href="login.html" class="nav-link">Login / Registro</a></li>
+                    <li id="authNavLinkContainer"><a href="login.html" id="authNavLink" class="nav-link">Login / Registro</a></li>
                 </ul>
             </nav>
         </div>
@@ -58,7 +57,7 @@
                 <div class="form-group">
                     <label for="artworkImage">Imagen de la Obra:</label>
                     <input type="file" id="artworkImage" name="artwork_image" accept="image/*" required>
-                    <small>Solo archivos de imagen (JPG, PNG, GIF). Tamaño máximo: 15MB.</small>
+                    <small>Solo archivos de imagen (JPG, PNG, GIF). Tamaño máximo: 5MB.</small>
                 </div>
                 <button type="submit" class="submit-button">Subir Obra</button>
                 <div id="uploadMessage" class="message-area"></div>

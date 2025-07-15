@@ -1,15 +1,11 @@
 <!DOCTYPE html>
-<!--/proyecto_integrador/public/login.html-->
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Galería de Arte - Mi Perfil</title>
-
     <link rel="stylesheet" href="css/style.css">
-    <!-- Enlaces CDN para jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- Enlace al archivo JavaScript de perfil (ruta corregida) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="js/profile.js" defer></script>
 </head>
 <body>
@@ -23,7 +19,8 @@
                 <ul>
                     <li><a href="index.html" class="nav-link">Inicio</a></li>
                     <li><a href="profile.html" class="nav-link">Mi Perfil</a></li>
-                    <li><a href="login.html" class="nav-link">Login / Registro</a></li>
+                    <li><a href="upload.html" class="nav-link">Subir Obra</a></li>
+                    <li id="authNavLinkContainer"><a href="login.html" id="authNavLink" class="nav-link">Login / Registro</a></li>
                 </ul>
             </nav>
         </div>
@@ -32,19 +29,26 @@
     <main class="container profile-container">
         <section class="profile-section">
             <h2 class="section-title">Mi Perfil</h2>
-            <div id="profileContent" class="profile-content">
-                <p>Cargando información del perfil...</p>
-                <!-- La información del perfil se cargará aquí dinámicamente -->
-            </div>
-            <button id="logoutButton" class="submit-button logout-button">Cerrar Sesión</button>
+            <div id="profileMessage" class="message-area"></div>
 
-            <h3 class="section-subtitle">Mis Obras Favoritas</h3>
-            <div id="favoriteArtworks" class="artwork-grid">
+            <div class="profile-content">
+                <p><strong>Nombre de Usuario:</strong> <span id="profileUsername">Cargando...</span></p>
+                <p><strong>Email:</strong> <span id="profileEmail">Cargando...</span></p>
+                <p><strong>Miembro desde:</strong> <span id="profileMemberSince">Cargando...</span></p>
+                <button id="logoutButton" class="submit-button logout-button">Cerrar Sesión</button>
+            </div>
+
+            <h3 class="section-subtitle">Tus Obras Favoritas</h3>
+            <div id="favoriteArtworks" class="artwork-grid pinterest-grid">
                 <!-- Las obras favoritas se cargarán aquí dinámicamente -->
                 <p class="loading-message">Cargando obras favoritas...</p>
             </div>
 
-            <div id="profileMessage" class="message-area"></div>
+            <h3 class="section-subtitle">Tus Obras Subidas</h3>
+            <div id="uploadedArtworks" class="artwork-grid pinterest-grid">
+                <!-- Las obras subidas por el usuario se cargarán aquí dinámicamente -->
+                <p class="loading-message">Cargando obras subidas...</p>
+            </div>
         </section>
     </main>
 

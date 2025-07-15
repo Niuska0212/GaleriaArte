@@ -1,4 +1,6 @@
-
+// Define la URL base de tu API, apuntando al único punto de entrada (index.php)
+// Ruta relativa: sube dos niveles (de js/ a public/, luego a la raíz del proyecto GaleriaArte/)
+// y luego baja a backend/index.php
 const BASE_API_ENTRYPOINT = '../backend/index.php';
 
 $(document).ready(function() {
@@ -33,8 +35,41 @@ $(document).ready(function() {
         localStorage.removeItem('userId');
         localStorage.removeItem('username');
         updateAuthNav(); // Actualiza la navegación inmediatamente
-        alert('Sesión cerrada exitosamente.'); // Usar alert solo para depuración rápida, reemplazar con modal
-        window.location.href = 'index.html'; // Redirigir a la página principal
+        // Reemplazar alert con un modal o mensaje en el DOM para producción
+        // alert('Sesión cerrada exitosamente.');
+        showMessageInModal('Sesión cerrada exitosamente.', 'success'); // Usar función de mensaje
+        setTimeout(() => {
+            window.location.href = 'index.html'; // Redirigir a la página principal
+        }, 1500);
+    }
+
+    // --- Función genérica para mostrar mensajes (reemplazo de alert) ---
+    function showMessageInModal(message, type = 'info') {
+        // Implementación simple de un modal/mensaje en el DOM.
+        // Para una aplicación real, usarías un div modal oculto que se muestra y oculta.
+        console.log(`Mensaje (${type}): ${message}`);
+        // Ejemplo básico:
+        let $messageDiv = $('#globalMessageModal');
+        if ($messageDiv.length === 0) {
+            $messageDiv = $('<div id="globalMessageModal" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); padding: 15px 30px; border-radius: 8px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; font-weight: bold;"></div>');
+            $('body').append($messageDiv);
+        }
+        $messageDiv.text(message).removeClass('success error info').addClass(type);
+
+        if (type === 'success') {
+            $messageDiv.css({'background-color': '#d4edda', 'color': '#155724', 'border': '1px solid #c3e6cb'});
+        } else if (type === 'error') {
+            $messageDiv.css({'background-color': '#f8d7da', 'color': '#721c24', 'border': '1px solid #f5c6cb'});
+        } else { // info
+            $messageDiv.css({'background-color': '#e2e3e5', 'color': '#383d41', 'border': '1px solid #d6d8db'});
+        }
+
+        $messageDiv.fadeIn(300);
+        setTimeout(() => {
+            $messageDiv.fadeOut(300, function() {
+                $(this).empty();
+            });
+        }, 3000);
     }
 
 

@@ -60,10 +60,6 @@ switch ($resource) {
         } elseif ($method === 'POST') {
             // Las peticiones POST (subir obra, toggle like) sí requieren autenticación
             $token = getBearerToken();
-            // La validación del token ahora es una función global o parte de AuthController
-            // Para mantener la simplicidad, la validación se moverá a una función en AuthController.php
-            // y se llamará directamente aquí, o se replicará la lógica simple.
-            // Para este ejemplo, la lógica de validación de token se moverá a AuthController.php como una función.
             if (!validateAuthToken($token)) { // Usando la función de validación de token
                 http_response_code(401);
                 echo json_encode(["message" => "Acceso no autorizado. Token inválido o ausente."]);
