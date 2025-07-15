@@ -11,26 +11,31 @@
 body {
     font-family: 'Inter', sans-serif;
     line-height: 1.6;
-    color: #333; /* Tono neutro oscuro */
-    background-color: #f8f8f8; /* Fondo muy claro, casi blanco */
+    color: #333;
+    background-color: #f8f8f8;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
 }
 
+/* Contenedor principal centrado */
 .container {
     max-width: 1200px;
     margin: 20px auto;
     padding: 0 20px;
-    flex-grow: 1; /* Permite que el contenedor principal ocupe el espacio restante */
+    flex-grow: 1;
+    width: 100%;
 }
 
 /* --- Header --- */
 .main-header {
-    background-color: #ffffff; /* Blanco puro para el encabezado */
-    border-bottom: 1px solid #eee; /* Línea sutil en la parte inferior */
+    background-color: #ffffff;
+    border-bottom: 1px solid #eee;
     padding: 15px 0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Sombra muy ligera */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 
 .header-content {
@@ -40,7 +45,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    flex-wrap: wrap; /* Para que se ajuste en pantallas pequeñas */
+    flex-wrap: wrap;
 }
 
 .logo {
@@ -50,9 +55,9 @@ body {
 }
 
 .logo-img {
-    height: 40px; /* Tamaño del logo */
+    height: 40px;
     width: auto;
-    border-radius: 5px; /* Bordes ligeramente redondeados */
+    border-radius: 5px;
 }
 
 .logo h1 {
@@ -69,7 +74,7 @@ body {
 
 .nav-link {
     text-decoration: none;
-    color: #555; /* Gris medio para enlaces de navegación */
+    color: #555;
     font-weight: 500;
     font-size: 1.05em;
     padding: 5px 0;
@@ -77,7 +82,7 @@ body {
 }
 
 .nav-link:hover {
-    color: #007bff; /* Un azul sutil para el hover, como acento */
+    color: #007bff;
     border-bottom: 2px solid #007bff;
 }
 
@@ -86,7 +91,7 @@ body {
     max-width: 1200px;
     margin: 20px auto 0;
     padding: 15px 20px;
-    background-color: #f0f0f0; /* Un gris claro para esta sección */
+    background-color: #f0f0f0;
     border-radius: 8px;
     display: flex;
     flex-wrap: wrap;
@@ -132,7 +137,7 @@ body {
 
 .search-button:hover {
     background-color: #0056b3;
-    transform: translateY(-1px); /* Efecto de elevación sutil */
+    transform: translateY(-1px);
 }
 
 .filters {
@@ -156,9 +161,13 @@ body {
     border-color: #007bff;
 }
 
-/* --- Sección de la Galería --- */
+/* --- GALERÍA ESTILO PINTEREST MEJORADA Y CENTRADA --- */
+/* GALERÍA ESTILO PINTEREST MEJORADA Y CENTRADA */
 .gallery-section {
     margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center; 
 }
 
 .section-title {
@@ -169,50 +178,58 @@ body {
     font-weight: 600;
 }
 
-
+/* Cuadrícula estilo Pinterest con grid CSS */
 .artwork-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Más flexible para diferentes tamaños de tarjetas */
     gap: 20px;
+    width: 100%; /* Asegura que ocupe el ancho disponible */
+    max-width: 1200px; /* Limita el ancho máximo para que no se extienda demasiado */
+    margin: 0 auto; /* ¡Esto es clave para centrar el grid dentro de su contenedor! */
+    justify-content: center; /* Centra las columnas dentro del grid si hay espacio extra */
 }
+
 .artwork-card {
+    background-color: #ffffff;
     border: 1px solid #ccc;
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    break-inside: avoid;
 }
+
+.artwork-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
 .artwork-card img {
     width: 100%;
-    height: 200px;
-    object-fit: cover;
+    height: auto;
+    display: block;
+    border-bottom: 1px solid #eee;
 }
-.artwork-info {
-    padding: 10px;
-    text-align: center;
-}
-
-
 
 .artwork-info {
     padding: 15px;
     text-align: center;
-    flex-grow: 1; /* Permite que la información ocupe el espacio restante */
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
 }
 
 .artwork-info h3 {
-    font-size: 1.4em;
+    font-size: 1.2em;
     color: #333;
-    margin-bottom: 5px;
-    font-weight: 500;
+    margin-bottom: 8px;
+    font-weight: 600;
 }
 
 .artwork-info p {
-    font-size: 0.95em;
+    font-size: 0.9em;
     color: #666;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
 .artwork-actions {
@@ -239,9 +256,100 @@ body {
     transform: translateY(-1px);
 }
 
+/* --- SECCIÓN DE COMENTARIOS --- */
+.comments-section {
+    background-color: #ffffff;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    margin: 40px auto;
+    max-width: 1200px;
+}
+
+.comments-section h3 {
+    font-size: 1.4em;
+    color: #333;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    text-align: center;
+}
+
+.comments-list {
+    max-height: 400px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+}
+
+.comment-item {
+    border-bottom: 1px solid #eee;
+    padding: 15px 0;
+}
+
+.comment-item:last-child {
+    border-bottom: none;
+}
+
+.comment-author {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+    font-size: 0.95em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.comment-date {
+    font-weight: 400;
+    color: #777;
+    font-size: 0.85em;
+}
+
+.comment-text {
+    color: #444;
+    line-height: 1.5;
+    font-size: 0.95em;
+    margin-top: 8px;
+}
+
+.comment-form {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.comment-form textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1em;
+    margin-bottom: 12px;
+    resize: vertical;
+    max-width: 800px;
+}
+
+.comment-form button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+}
+
+.comment-form button:hover {
+    background-color: #0056b3;
+}
+
 /* --- Footer --- */
 .main-footer {
-    background-color: #333; /* Gris oscuro para el pie de página */
+    background-color: #333;
     color: white;
     text-align: center;
     padding: 20px 0;
@@ -249,73 +357,22 @@ body {
     font-size: 0.9em;
 }
 
-/* --- Responsive Design --- */
-@media (max-width: 768px) {
-    .header-content {
-        flex-direction: column;
-        gap: 15px;
-    }
-
-    .main-nav ul {
-        flex-direction: column;
-        gap: 10px;
-        text-align: center;
-    }
-
-    .search-filter-section {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .search-bar {
-        width: 100%;
-        max-width: none;
-    }
-
-    .filters {
-        flex-direction: column;
-        align-items: stretch;
-        width: 100%;
-    }
-
-    .filter-select {
-        width: 100%;
-    }
-
-}
-
-/* Estilos para jQuery UI (si se usan componentes específicos como Datepicker, Autocomplete, etc.) */
-/* Estos estilos son básicos y se pueden personalizar */
-.ui-widget-header {
-    background: #007bff;
-    border: 1px solid #0056b3;
-    color: #fff;
-    font-weight: bold;
-    border-radius: 5px 5px 0 0;
-}
-.ui-state-active, .ui-widget-content .ui-state-active, .ui-widget-header .ui-state-active {
-    background: #0056b3;
-    color: #fff;
-}
-.ui-datepicker {
-    font-size: 0.9em;
-}
-
-/* --- Estilos específicos para Login y Perfil --- */
-.auth-container, .profile-container {
+/* --- PÁGINAS DE AUTENTICACIÓN CENTRADAS --- */
+.auth-container {
     display: flex;
     justify-content: center;
-    align-items: flex-start; /* Alinea arriba para evitar que se centre verticalmente demasiado */
-    padding-top: 40px; /* Espacio desde el header */
+    align-items: center;
+    min-height: 80vh;
+    padding: 40px 20px;
 }
 
-.auth-section, .profile-section {
+.auth-section {
     background-color: #ffffff;
     border-radius: 10px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     padding: 40px;
     width: 100%;
-    max-width: 500px; /* Ancho máximo para los formularios */
+    max-width: 500px;
     text-align: center;
 }
 
@@ -363,9 +420,101 @@ body {
     display: none;
 }
 
-.form-group {
-    text-align: left;
+/* --- DETALLE DE OBRA CENTRADO --- */
+.artwork-detail-container {
+    display: flex;
+    justify-content: center;
+    padding-top: 40px;
+}
+
+.artwork-detail-section {
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    padding: 40px;
+    width: 100%;
+    max-width: 900px;
+    text-align: center;
+}
+
+.artwork-main-info {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.artwork-detail-img {
+    max-width: 100%;
+    height: auto;
+    max-height: 600px;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin: 0 auto;
+}
+
+.artwork-text-info {
+    text-align: center;
+}
+
+.artwork-text-info h2 {
+    font-size: 2.5em;
+    color: #333;
+    margin-bottom: 15px;
+    font-weight: 700;
+}
+
+.artwork-text-info p {
+    font-size: 1.1em;
+    color: #555;
     margin-bottom: 10px;
+}
+
+.artwork-description {
+    margin-top: 20px;
+    font-size: 1.05em;
+    line-height: 1.8;
+    color: #444;
+    text-align: left;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.artwork-actions-detail {
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+    margin-top: 30px;
+    margin-bottom: 40px;
+}
+
+.detail-action-button {
+    padding: 12px 25px;
+    font-size: 1.1em;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    border: 2px solid #007bff;
+    background-color: #fff;
+    color: #007bff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.detail-action-button:hover {
+    background-color: #007bff;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* --- FORMULARIOS --- */
+.form-group {
+    margin-bottom: 15px;
+    text-align: left;
 }
 
 .form-group label {
@@ -375,23 +524,14 @@ body {
     color: #444;
 }
 
-.form-group input[type="text"],
-.form-group input[type="email"],
-.form-group input[type="password"] {
+.form-group input,
+.form-group textarea,
+.form-group select {
     width: 100%;
     padding: 12px;
     border: 1px solid #ddd;
     border-radius: 6px;
     font-size: 1em;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.form-group input[type="text"]:focus,
-.form-group input[type="email"]:focus,
-.form-group input[type="password"]:focus {
-    outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
 }
 
 .submit-button {
@@ -403,7 +543,7 @@ body {
     cursor: pointer;
     font-size: 1.1em;
     font-weight: 600;
-    transition: background-color 0.3s ease, transform 0.2s ease;
+    transition: all 0.3s ease;
     margin-top: 20px;
 }
 
@@ -412,350 +552,158 @@ body {
     transform: translateY(-2px);
 }
 
-.message-area {
-    margin-top: 15px;
-    padding: 10px;
-    border-radius: 5px;
-    font-size: 0.95em;
-    text-align: center;
+/* --- RESPONSIVE --- */
+@media (max-width: 1024px) {
+    .artwork-grid {
+        grid-template-columns: repeat(3, 1fr); /* 3 columnas en tablet */
+    }
 }
 
-.message-area.success {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+@media (max-width: 768px) {
+    .artwork-grid {
+        grid-template-columns: repeat(2, 1fr); /* 2 columnas en móvil */
+    }
+    
+    .header-content {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .main-nav ul {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+
+    .search-filter-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-bar {
+        width: 100%;
+        max-width: none;
+    }
+
+    .filters {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    .filter-select {
+        width: 100%;
+    }
+    
+    .artwork-detail-section {
+        padding: 20px;
+    }
 }
 
-.message-area.error {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
+@media (max-width: 480px) {
+    .artwork-grid {
+        grid-template-columns: 1fr; /* 1 columna en móviles pequeños */
+    }
+    
+    .artwork-actions-detail {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .auth-section {
+        padding: 30px 20px;
+    }
 }
 
-/* Estilos para la página de perfil */
-.profile-content {
-    background-color: #f9f9f9;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    padding: 25px;
-    margin-bottom: 30px;
-    text-align: left;
+
+/* Agrega esta clase para centrar el contenido principal del perfil */
+.profile-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centra los elementos hijos horizontalmente */
+    width: 100%; /* Asegura que el contenedor ocupe todo el ancho */
+    max-width: 1200px; /* O el ancho máximo que prefieras para el contenido del perfil */
+    margin: 20px auto; /* Centra el contenedor del perfil en la página */
+    padding: 0 20px;
+    flex-grow: 1;
 }
 
-.profile-content p {
-    margin-bottom: 10px;
-    font-size: 1.1em;
-    color: #444;
-}
-
-.profile-content p strong {
-    color: #333;
-    font-weight: 600;
-}
-
-.logout-button {
-    background-color: #dc3545; /* Rojo para cerrar sesión */
-    margin-top: 20px;
-}
-
-.logout-button:hover {
-    background-color: #c82333;
+.profile-section {
+    width: 100%; /* Asegura que la sección de perfil ocupe el ancho completo de su contenedor */
+    max-width: 900px; /* O un ancho máximo que desees para el contenido del perfil */
+    margin-bottom: 40px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    padding: 40px;
+    text-align: center; /* Centra el texto dentro de esta sección */
 }
 
 .section-subtitle {
     font-size: 1.6em;
     color: #333;
     text-align: center;
-    margin-top: 40px;
+    margin-top: 30px;
     margin-bottom: 20px;
     font-weight: 600;
     border-bottom: 1px solid #eee;
     padding-bottom: 10px;
 }
 
-/* Ajustes para el grid de obras de arte en el perfil */
-.profile-container {
-    margin-top: 20px;
-    /* Asegura que el grid se adapte bien dentro del contenedor del perfil */
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); /* Columnas más pequeñas para el perfil */
-    gap: 20px;
-}
-
-.profile-container  {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-.profile-container  {
-    transform: translateY(-3px);
-    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.12);
-}
-
-
-   
-
-.artwork-info {
-    padding: 12px 15px;
-    text-align: center;
-}
-
-.artwork-info h3 {
-    font-size: 1.2em;
-    color: #333333;
-    font-weight: 600;
-    margin-bottom: 5px;
-}
-
-.artwork-info p {
-    font-size: 0.9em;
-    color: #666;
-}
-
-
-.artwork-detail-section {
-    background-color: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    padding: 40px;
-    width: 100%;
-    max-width: 900px;
-    margin: 0 auto;
-    text-align: center;
-}
-
-.artwork-main-info {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-    align-items: center;
+.profile-content {
+    text-align: center; /* Centra el texto del contenido del perfil */
     margin-bottom: 30px;
 }
 
-.artwork-detail-img {
-    max-width: 100%;
-    height: auto;
-    max-height: 600px;
-    object-fit: contain;
+
+/* --- MODAL BASE --- */
+.modal {
+    display: none; /* Esto oculta el modal por defecto */
+    position: fixed; /* Mantiene el modal en la misma posición en la ventana de visualización */
+    z-index: 1000; /* Asegura que esté por encima de otros elementos */
+    left: 0;
+    top: 0;
+    width: 100%; /* Cubre todo el ancho */
+    height: 100%; /* Cubre toda la altura */
+    overflow: auto; /* Permite desplazamiento si el contenido es demasiado grande */
+    background-color: rgba(0,0,0,0.6); /* Fondo semi-transparente oscuro */
+    justify-content: center; /* Centra el contenido modal horizontalmente */
+    align-items: center; /* Centra el contenido modal verticalmente */
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: auto; /* Centra el contenido del modal si display es block o flex */
+    padding: 30px;
+    border: 1px solid #888;
     border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    transition: transform 0.4s ease, opacity 0.4s ease;
-    animation: zoomIn 0.4s ease forwards;
-    opacity: 0;
+    width: 90%;
+    max-width: 600px; /* Ancho máximo para el contenido del modal */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    position: relative; /* Para posicionar el botón de cerrar */
+    animation: fadeIn 0.3s ease-out; /* Animación de aparición */
 }
 
-@keyframes zoomIn {
-    from {
-        transform: scale(0.95);
-        opacity: 0;
-    }
-    to {
-        transform: scale(1);
-        opacity: 1;
-    }
+/* Animación para que el modal aparezca suavemente */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-.artwork-text-info {
-    text-align: left;
-    width: 100%;
+.close-button {
+    color: #aaa;
+    position: absolute;
+    top: 15px;
+    right: 25px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s ease;
 }
 
-.artwork-text-info h2 {
-    font-size: 2.2em;
+.close-button:hover,
+.close-button:focus {
     color: #333;
-    font-weight: 700;
-    margin-bottom: 15px;
-}
-
-.artwork-text-info p {
-    font-size: 1.1em;
-    color: #555;
-    line-height: 1.6;
-    margin-bottom: 10px;
-}
-
-.artwork-description {
-    margin-top: 20px;
-    font-size: 1.05em;
-    color: #444;
-}
-
-.artwork-actions-detail {
-    margin-top: 30px;
-    display: flex;
-    gap: 20px;
-    justify-content: center;
-}
-
-.like-button-detail,
-.save-button-detail {
-    padding: 12px 25px;
-    font-size: 1em;
-    font-weight: 600;
-    border-radius: 8px;
-    border: 2px solid #007bff;
-    background-color: #fff;
-    color: #007bff;
-    transition: all 0.3s ease;
+    text-decoration: none;
     cursor: pointer;
 }
-
-.like-button-detail:hover,
-.save-button-detail:hover {
-    background-color: #007bff;
-    color: #fff;
-    transform: translateY(-2px);
-}
-
-.like-button-detail.liked {
-    background-color: #e74c3c;
-    border-color: #e74c3c;
-    color: #fff;
-}
-
-.save-button-detail.saved {
-    background-color: #f39c12;
-    border-color: #f39c12;
-    color: #fff;
-}
-
-
-.like-button-detail, .save-button-detail {
-    padding: 12px 25px;
-    font-size: 1.1em;
-    font-weight: 600;
-    border-radius: 8px;
-    transition: background-color 0.3s ease, transform 0.2s ease, color 0.3s ease;
-    border: 2px solid #007bff; /* Borde para los botones de acción */
-    background-color: #fff;
-    color: #007bff;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.like-button-detail:hover, .save-button-detail:hover {
-    background-color: #007bff;
-    color: white;
-    transform: translateY(-2px);
-}
-
-.like-button-detail.liked {
-    background-color: #e74c3c; /* Rojo para "Me gusta" */
-    color: white;
-    border-color: #e74c3c;
-}
-.like-button-detail.liked:hover {
-    background-color: #c0392b;
-    border-color: #c0392b;
-}
-
-.save-button-detail.saved {
-    background-color: #f39c12; /* Naranja para "Guardado" */
-    color: white;
-    border-color: #f39c12;
-}
-.save-button-detail.saved:hover {
-    background-color: #e67e22;
-    border-color: #e67e22;
-}
-
-/* --- Sección de Comentarios --- */
-.comments-section {
-    margin-top: 40px;
-    text-align: left;
-}
-
-.comments-list {
-    background-color: #f9f9f9;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 30px;
-    max-height: 400px; /* Altura máxima para la lista de comentarios */
-    overflow-y: auto; /* Scroll si hay muchos comentarios */
-}
-
-.comment-item {
-    border-bottom: 1px solid #eee;
-    padding: 15px 0;
-}
-
-.comment-item:last-child {
-    border-bottom: none; /* No hay borde en el último comentario */
-}
-
-.comment-author {
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 5px;
-    font-size: 0.95em;
-}
-
-.comment-date {
-    font-weight: 400;
-    color: #777;
-    font-size: 0.85em;
-}
-
-.comment-text {
-    color: #444;
-    line-height: 1.5;
-    font-size: 1em;
-}
-
-.no-comments {
-    text-align: center;
-    color: #777;
-    padding: 20px;
-}
-
-.comment-form {
-    background-color: #ffffff;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    padding: 25px;
-    margin-top: 20px;
-}
-
-.comment-form h4 {
-    font-size: 1.4em;
-    color: #333;
-    margin-bottom: 20px;
-    text-align: center;
-}
-
-.comment-form textarea {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 1em;
-    min-height: 100px;
-    resize: vertical; /* Permite redimensionar verticalmente */
-    margin-bottom: 15px;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.comment-form textarea:focus {
-    outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
-}
-
-
-
-@media (min-width: 768px) {
-    .artwork-main-info {
-        flex-direction: row;
-        align-items: flex-start;
-    }
-
-    .artwork-detail-img {
-        width: 50%;
-        max-width: 450px;
-    }
-
-    .artwork-text-info {
-        width: 50%;
-        padding-left: 30px;
-    }
-}
-
