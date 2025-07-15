@@ -1,5 +1,5 @@
 // Define la URL base de tu API, apuntando al único punto de entrada (index.php)
-const BASE_API_ENTRYPOINT = 'backend/index.php'; // Ruta relativa desde la raíz del proyecto
+const BASE_API_ENTRYPOINT = '../backend/index.php'; // Ruta relativa desde la raíz del proyecto
 
 $(document).ready(function() {
     console.log("artworkDetail.js cargado.");
@@ -12,8 +12,36 @@ $(document).ready(function() {
     const $commentForm = $('#commentForm');
     const $commentText = $('#commentText');
     const $commentMessage = $('#commentMessage');
+    const $authNavLink = $('#authNavLink'); // Nuevo: Referencia al enlace de autenticación
 
     let currentArtworkId = null;
+
+    // --- Función para actualizar el enlace de navegación de autenticación ---
+    function updateAuthNav() {
+        const userToken = localStorage.getItem('userToken');
+        if (userToken) {
+            $authNavLink.text('Cerrar Sesión');
+            $authNavLink.attr('href', '#');
+            $authNavLink.off('click').on('click', function(e) {
+                e.preventDefault();
+                handleLogout();
+            });
+        } else {
+            $authNavLink.text('Login / Registro');
+            $authNavLink.attr('href', 'login.html');
+            $authNavLink.off('click');
+        }
+    }
+
+    // --- Función para manejar el cierre de sesión (centralizada) ---
+    function handleLogout() {
+        localStorage.removeItem('userToken');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('username');
+        updateAuthNav(); // Actualiza la navegación
+        alert('Sesión cerrada exitosamente.'); // Usar alert solo para depuración rápida, reemplazar con modal
+        window.location.href = 'index.html'; // Redirigir
+    }
 
     // --- Función para obtener el ID de la obra de la URL ---
     function getArtworkIdFromUrl() {
@@ -317,4 +345,5 @@ $(document).ready(function() {
 
     // --- Inicializar la carga de detalles de la obra al cargar la página ---
     loadArtworkDetails();
+    updateAuthNav(); // Actualiza el estado del botón de login/logout al cargar
 });

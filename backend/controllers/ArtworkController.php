@@ -191,13 +191,13 @@ function addArtworkFunc(PDO $conn, $data, $file_data) {
     }
 
     $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
-    $max_size = 5 * 1024 * 1024; // 5 MB
+    $max_size = 15 * 1024 * 1024; // 5 MB
 
     if (!in_array($file_data['type'], $allowed_types)) {
         return ["success" => false, "message" => "Tipo de archivo no permitido. Solo JPG, PNG, GIF."];
     }
     if ($file_data['size'] > $max_size) {
-        return ["success" => false, "message" => "El tamaño del archivo excede el límite de 5MB."];
+        return ["success" => false, "message" => "El tamaño del archivo excede el límite de 15MB."];
     }
     if ($file_data['error'] !== UPLOAD_ERR_OK) {
         return ["success" => false, "message" => "Error al subir el archivo: " . $file_data['error']];

@@ -1,5 +1,5 @@
-// Define la URL base de tu API, apuntando al único punto de entrada (index.php)
-const BASE_API_ENTRYPOINT = 'backend/index.php'; // Ruta relativa desde la raíz del proyecto
+
+const BASE_API_ENTRYPOINT = '../backend/index.php';
 
 $(document).ready(function() {
     console.log("app.js cargado. Conectando con el backend PHP a través de index.php.");
@@ -8,9 +8,39 @@ $(document).ready(function() {
     const $searchInput = $('#searchInput');
     const $styleFilter = $('#styleFilter');
     const $artistFilter = $('#artistFilter');
+    const $authNavLink = $('#authNavLink'); // Nuevo: Referencia al enlace de autenticación
+
+    // --- Función para actualizar el enlace de navegación de autenticación ---
+    function updateAuthNav() {
+        const userToken = localStorage.getItem('userToken');
+        if (userToken) {
+            $authNavLink.text('Cerrar Sesión');
+            $authNavLink.attr('href', '#'); // Cambia el href a '#' o similar para manejar el clic con JS
+            $authNavLink.off('click').on('click', function(e) { // Elimina listeners anteriores y añade uno nuevo
+                e.preventDefault(); // Previene la navegación
+                handleLogout();
+            });
+        } else {
+            $authNavLink.text('Login / Registro');
+            $authNavLink.attr('href', 'login.html');
+            $authNavLink.off('click'); // Elimina cualquier listener de logout si no está logueado
+        }
+    }
+
+    // --- Función para manejar el cierre de sesión ---
+    function handleLogout() {
+        localStorage.removeItem('userToken');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('username');
+        updateAuthNav(); // Actualiza la navegación inmediatamente
+        alert('Sesión cerrada exitosamente.'); // Usar alert solo para depuración rápida, reemplazar con modal
+        window.location.href = 'index.html'; // Redirigir a la página principal
+    }
+
 
     // --- Función para renderizar las obras de arte en la galería ---
     function renderArtworks(artworksToDisplay) {
+        console.log("Artworks a mostrar:", artworksToDisplay); // DEBUG: Ver los datos recibidos
         $gallery.empty(); // Limpia la galería antes de añadir nuevas obras
 
         if (artworksToDisplay.length === 0) {
@@ -19,6 +49,7 @@ $(document).ready(function() {
         }
 
         $.each(artworksToDisplay, function(index, artwork) {
+            console.log("Procesando obra:", artwork.title, "URL de imagen:", artwork.image_url); // DEBUG: Ver cada obra y su URL
             const artworkCard = `
                 <div class="artwork-card" data-id="${artwork.id}">
                     <img src="${artwork.image_url}" alt="${artwork.title}" onerror="this.onerror=null;this.src='https://placehold.co/400x250/cccccc/333333?text=Obra+no+disponible';">
@@ -59,17 +90,20 @@ $(document).ready(function() {
             url += '&' + params.toString(); // Usa '&' porque 'resource' ya es el primer parámetro
         }
 
+        console.log("URL de fetchArtworks:", url); // DEBUG: Ver la URL completa de la petición
         try {
             const response = await fetch(url);
+            console.log("Respuesta HTTP de artworks:", response); // DEBUG: Ver el objeto de respuesta HTTP
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Error al cargar las obras de arte.');
+                // Si la respuesta no es OK (ej. 404, 500), intentar leer el error del JSON
+                const errorData = await response.json().catch(() => ({ message: 'Error desconocido o respuesta no JSON.' }));
+                throw new Error(errorData.message || `Error HTTP: ${response.status} ${response.statusText}`);
             }
             const artworks = await response.json();
             renderArtworks(artworks);
         } catch (error) {
             console.error('Error al cargar las obras de arte:', error);
-            $gallery.html(`<p class="error-message" style="text-align: center; padding: 50px;">Error al cargar las obras: ${error.message}. Por favor, verifica la conexión al servidor.</p>`);
+            $gallery.html(`<p class="error-message" style="text-align: center; padding: 50px;">Error al cargar las obras: ${error.message}. Por favor, verifica la conexión al servidor y la ruta de las imágenes.</p>`);
         }
     }
 
@@ -101,8 +135,10 @@ $(document).ready(function() {
     }
 
     // --- Manejo de Clic en Tarjetas de Obras (para ir a la página de detalle) ---
+    // Usamos delegación de eventos para manejar clics en tarjetas creadas dinámicamente
     $gallery.on('click', '.artwork-card', function() {
         const artworkId = $(this).data('id');
+        // Redirige a la página de detalle de la obra, pasando el ID en la URL
         window.location.href = `artwork.html?id=${artworkId}`;
     });
 
@@ -138,7 +174,9 @@ $(document).ready(function() {
         }
     }
 
+
     // --- Inicializar la carga de obras y opciones de filtro al cargar la página ---
     fetchArtworks(); // Carga inicial de todas las obras
     loadFilterOptions(); // Carga las opciones de los filtros
+    updateAuthNav(); // Actualiza el estado del botón de login/logout al cargar
 });

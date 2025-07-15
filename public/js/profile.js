@@ -1,5 +1,5 @@
 // Define la URL base de tu API, apuntando al único punto de entrada (index.php)
-const BASE_API_ENTRYPOINT = 'backend/index.php'; // Ruta relativa desde la raíz del proyecto
+const BASE_API_ENTRYPOINT = '../backend/index.php'; // Ruta relativa desde la raíz del proyecto
 
 $(document).ready(function() {
     console.log("profile.js cargado.");
@@ -8,6 +8,34 @@ $(document).ready(function() {
     const $favoriteArtworks = $('#favoriteArtworks');
     const $profileMessage = $('#profileMessage');
     const $logoutButton = $('#logoutButton');
+    const $authNavLink = $('#authNavLink'); // Nuevo: Referencia al enlace de autenticación
+
+    // --- Función para actualizar el enlace de navegación de autenticación ---
+    function updateAuthNav() {
+        const userToken = localStorage.getItem('userToken');
+        if (userToken) {
+            $authNavLink.text('Cerrar Sesión');
+            $authNavLink.attr('href', '#');
+            $authNavLink.off('click').on('click', function(e) {
+                e.preventDefault();
+                handleLogout();
+            });
+        } else {
+            $authNavLink.text('Login / Registro');
+            $authNavLink.attr('href', 'login.html');
+            $authNavLink.off('click');
+        }
+    }
+
+    // --- Función para manejar el cierre de sesión (centralizada) ---
+    function handleLogout() {
+        localStorage.removeItem('userToken');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('username');
+        updateAuthNav(); // Actualiza la navegación
+        alert('Sesión cerrada exitosamente.'); // Usar alert solo para depuración rápida, reemplazar con modal
+        window.location.href = 'index.html'; // Redirigir
+    }
 
     // --- Función para mostrar mensajes ---
     function showMessage(element, message, type = 'error') {
@@ -49,7 +77,6 @@ $(document).ready(function() {
         $favoriteArtworks.html('<p class="loading-message">Cargando obras favoritas...</p>');
 
         try {
-            // Apunta al único punto de entrada y especifica el recurso
             const userResponse = await fetch(`${BASE_API_ENTRYPOINT}?resource=users&id=${userId}`, {
                 method: 'GET',
                 headers: {
@@ -67,7 +94,6 @@ $(document).ready(function() {
                     <p><strong>Miembro desde:</strong> ${new Date(userData.created_at).toLocaleDateString()}</p>
                 `);
 
-                // Apunta al único punto de entrada y especifica el recurso
                 const favoritesResponse = await fetch(`${BASE_API_ENTRYPOINT}?resource=users&action=favorites&id=${userId}`, {
                     method: 'GET',
                     headers: {
@@ -116,7 +142,7 @@ $(document).ready(function() {
             $(artworkCard).hide().appendTo($favoriteArtworks).fadeIn(500 + (index * 100));
         });
 
-        $favoriteArtworks.off('click', '.remove-favorite-button').on('click', '.remove-favorite-button', async function() { // Usar off() para evitar duplicados
+        $favoriteArtworks.off('click', '.remove-favorite-button').on('click', '.remove-favorite-button', async function() {
             const artworkId = $(this).data('artwork-id');
             const userId = localStorage.getItem('userId');
             const userToken = localStorage.getItem('userToken');
@@ -126,7 +152,6 @@ $(document).ready(function() {
             }
 
             try {
-                // Apunta al único punto de entrada y especifica el recurso
                 const response = await fetch(`${BASE_API_ENTRYPOINT}?resource=users`, {
                     method: 'POST',
                     headers: {
@@ -151,20 +176,10 @@ $(document).ready(function() {
         });
     }
 
-    // --- Manejo del botón de Cerrar Sesión ---
-    function handleLogout() {
-        localStorage.removeItem('userToken');
-        localStorage.removeItem('userId');
-        localStorage.removeItem('username');
-
-        showMessage($profileMessage, 'Sesión cerrada exitosamente. Redirigiendo...', 'success');
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 1500);
-    }
-
+    // --- Manejo del botón de Cerrar Sesión (desde el perfil) ---
     $logoutButton.on('click', handleLogout);
 
     // --- Inicializar la carga del perfil al cargar la página ---
     loadUserProfile();
+    updateAuthNav(); // Actualiza el estado del botón de login/logout al cargar
 });

@@ -1,5 +1,5 @@
 // Define la URL base de tu API, apuntando al único punto de entrada (index.php)
-const BASE_API_ENTRYPOINT = 'backend/index.php'; // Ruta relativa desde la raíz del proyecto
+const BASE_API_ENTRYPOINT = '../backend/index.php'; // Ruta relativa desde la raíz del proyecto
 
 $(document).ready(function() {
     console.log("auth.js cargado.");
@@ -10,6 +10,34 @@ $(document).ready(function() {
     const $registerMessage = $('#registerMessage');
     const $showLoginButton = $('#showLogin');
     const $showRegisterButton = $('#showRegister');
+    const $authNavLink = $('#authNavLink'); // Nuevo: Referencia al enlace de autenticación
+
+    // --- Función para actualizar el enlace de navegación de autenticación ---
+    function updateAuthNav() {
+        const userToken = localStorage.getItem('userToken');
+        if (userToken) {
+            $authNavLink.text('Cerrar Sesión');
+            $authNavLink.attr('href', '#');
+            $authNavLink.off('click').on('click', function(e) {
+                e.preventDefault();
+                handleLogout();
+            });
+        } else {
+            $authNavLink.text('Login / Registro');
+            $authNavLink.attr('href', 'login.html');
+            $authNavLink.off('click');
+        }
+    }
+
+    // --- Función para manejar el cierre de sesión (centralizada) ---
+    function handleLogout() {
+        localStorage.removeItem('userToken');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('username');
+        updateAuthNav(); // Actualiza la navegación
+        alert('Sesión cerrada exitosamente.'); // Usar alert solo para depuración rápida, reemplazar con modal
+        window.location.href = 'index.html'; // Redirigir
+    }
 
     // --- Función para mostrar mensajes ---
     function showMessage(element, message, type = 'error') {
@@ -64,7 +92,6 @@ $(document).ready(function() {
         $registerMessage.empty();
 
         try {
-            // Apunta al único punto de entrada y especifica el recurso
             const response = await fetch(`${BASE_API_ENTRYPOINT}?resource=auth`, {
                 method: 'POST',
                 headers: {
@@ -109,7 +136,6 @@ $(document).ready(function() {
         $loginMessage.empty();
 
         try {
-            // Apunta al único punto de entrada y especifica el recurso
             const response = await fetch(`${BASE_API_ENTRYPOINT}?resource=auth`, {
                 method: 'POST',
                 headers: {
@@ -130,6 +156,8 @@ $(document).ready(function() {
                 localStorage.setItem('userId', data.user.id);
                 localStorage.setItem('username', data.user.username);
 
+                updateAuthNav(); // Actualiza la navegación después de un login exitoso
+
                 setTimeout(() => {
                     window.location.href = 'profile.html';
                 }, 1500);
@@ -143,4 +171,6 @@ $(document).ready(function() {
             $submitButton.prop('disabled', false).text('Iniciar Sesión');
         }
     });
+
+    updateAuthNav(); // Llama al cargar la página para establecer el estado inicial del botón
 });
