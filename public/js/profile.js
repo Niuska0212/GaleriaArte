@@ -1,15 +1,22 @@
-
-const BASE_API_ENTRYPOINT = '../backend/index.php'; 
+// Define la URL base de tu API, apuntando al único punto de entrada (index.php)
+const BASE_API_ENTRYPOINT = '../backend/index.php'; // Ruta relativa desde la raíz del proyecto
 
 $(document).ready(function() {
     console.log("profile.js cargado.");
 
     const $profileContent = $('#profileContent');
     const $favoriteArtworks = $('#favoriteArtworks');
-    const $uploadedArtworks = $('#uploadedArtworks'); // Nuevo: Contenedor para obras subidas
+    const $uploadedArtworks = $('#uploadedArtworks'); // Contenedor para obras subidas
     const $profileMessage = $('#profileMessage');
     const $logoutButton = $('#logoutButton');
-    const $authNavLink = $('#authNavLink'); // Nuevo: Referencia al enlace de autenticación
+    const $authNavLink = $('#authNavLink'); // Referencia al enlace de autenticación
+
+    // Modal elements
+    const $editArtworkModal = $('#editArtworkModal');
+    const $closeModalButton = $editArtworkModal.find('.close-button');
+    const $editArtworkForm = $('#editArtworkForm');
+    const $editArtworkMessage = $('#editArtworkMessage');
+    const $currentArtworkImagePreview = $('#currentArtworkImagePreview');
 
     // --- Función para actualizar el enlace de navegación de autenticación ---
     function updateAuthNav() {
@@ -34,8 +41,6 @@ $(document).ready(function() {
         localStorage.removeItem('userId');
         localStorage.removeItem('username');
         updateAuthNav(); // Actualiza la navegación
-        // Reemplazar alert con un modal o mensaje en el DOM para producción
-        // alert('Sesión cerrada exitosamente.');
         showMessageInModal('Sesión cerrada exitosamente.', 'success'); // Usar función de mensaje
         setTimeout(() => {
             window.location.href = 'index.html'; // Redirigir
@@ -81,7 +86,7 @@ $(document).ready(function() {
     function checkLoginStatus() {
         const userToken = localStorage.getItem('userToken');
         if (!userToken) {
-            showMessage($profileMessage, 'No has iniciado sesión. Redirigiendo...', 'error');
+            showMessageInModal('No has iniciado sesión. Redirigiendo...', 'error');
             window.location.href = 'login.html';
             return false;
         }
@@ -99,7 +104,7 @@ $(document).ready(function() {
         const username = localStorage.getItem('username'); // Obtener el username para mostrar
 
         if (!userId || !userToken) {
-            showMessage($profileMessage, 'Datos de usuario incompletos. Por favor, inicia sesión de nuevo.', 'error');
+            showMessageInModal('Datos de usuario incompletos. Por favor, inicia sesión de nuevo.', 'error');
             window.location.href = 'login.html';
             return;
         }
@@ -154,14 +159,14 @@ $(document).ready(function() {
                 renderArtworksInGrid($uploadedArtworks, uploadedData, 'uploaded'); // Usar la función genérica
 
             } else {
-                showMessage($profileMessage, userData.message || 'Error al cargar el perfil.', 'error');
+                showMessageInModal(userData.message || 'Error al cargar el perfil.', 'error');
                 if (userResponse.status === 401 || userResponse.status === 403) {
                     handleLogout();
                 }
             }
         } catch (error) {
             console.error('Error de red o del servidor al cargar el perfil:', error);
-            showMessage($profileMessage, 'Error de conexión. Inténtalo de nuevo más tarde.', 'error');
+            showMessageInModal('Error de conexión. Inténtalo de nuevo más tarde.', 'error');
         }
     }
 
@@ -181,14 +186,20 @@ $(document).ready(function() {
                     <div class="artwork-info">
                         <h3>${artwork.title}</h3>
                         <p>${artwork.artist_name}</p>
-                        ${type === 'favorite' ? `<div class="artwork-actions"><button class="action-button remove-favorite-button" data-artwork-id="${artwork.id}">🗑️ Quitar</button></div>` : ''}
+                        <div class="artwork-actions">
+                            ${type === 'favorite' ? `<button class="action-button remove-favorite-button" data-artwork-id="${artwork.id}">🗑️ Quitar</button>` : ''}
+                            ${type === 'uploaded' ? `
+                                <button class="action-button edit-artwork-button" data-artwork-id="${artwork.id}">✏️ Editar</button>
+                                <button class="action-button delete-artwork-button" data-artwork-id="${artwork.id}">🗑️ Eliminar</button>
+                            ` : ''}
+                        </div>
                     </div>
                 </div>
             `;
             $(artworkCard).hide().appendTo(containerElement).fadeIn(500 + (index * 50));
         });
 
-        // Añadir event listener para quitar favoritos si es la sección de favoritos
+        // Añadir event listeners para quitar favoritos (si es la sección de favoritos)
         if (type === 'favorite') {
             containerElement.off('click', '.remove-favorite-button').on('click', '.remove-favorite-button', async function() {
                 const artworkId = $(this).data('artwork-id');
@@ -212,28 +223,152 @@ $(document).ready(function() {
                     const data = await response.json();
 
                     if (response.ok) {
-                        showMessage($profileMessage, data.message, 'success');
+                        showMessageInModal(data.message, 'success');
                         loadUserProfile(); // Recargar el perfil para actualizar la lista
                     } else {
-                        showMessage($profileMessage, data.message || 'Error al quitar de favoritos.', 'error');
+                        showMessageInModal(data.message || 'Error al quitar de favoritos.', 'error');
                     }
                 } catch (error) {
                     console.error('Error al quitar de favoritos:', error);
-                    showMessage($profileMessage, 'Error de conexión al quitar de favoritos.', 'error');
+                    showMessageInModal('Error de conexión al quitar de favoritos.', 'error');
+                }
+            });
+        }
+
+        // Añadir event listeners para editar y eliminar obras subidas (si es la sección de subidas)
+        if (type === 'uploaded') {
+            containerElement.off('click', '.edit-artwork-button').on('click', '.edit-artwork-button', async function() {
+                const artworkId = $(this).data('artwork-id');
+                // Cargar datos de la obra para pre-rellenar el modal
+                try {
+                    const response = await fetch(`${BASE_API_ENTRYPOINT}?resource=artworks&id=${artworkId}`);
+                    const artworkData = await response.json();
+
+                    if (response.ok) {
+                        // Pre-rellenar el formulario del modal
+                        $('#editArtworkId').val(artworkData.id);
+                        $('#editArtworkOwnerId').val(artworkData.owner_id);
+                        $('#editArtworkTitle').val(artworkData.title);
+                        $('#editArtworkArtist').val(artworkData.artist_name);
+                        $('#editArtworkDescription').val(artworkData.description);
+                        $('#editArtworkStyle').val(artworkData.style);
+                        $('#editArtworkYear').val(artworkData.creation_year);
+                        if (artworkData.image_url) {
+                            $currentArtworkImagePreview.attr('src', artworkData.image_url).show();
+                        } else {
+                            $currentArtworkImagePreview.hide();
+                        }
+                        $editArtworkMessage.empty(); // Limpiar mensajes anteriores del modal
+                        $editArtworkModal.css('display', 'flex'); // Mostrar el modal
+                    } else {
+                        showMessageInModal(artworkData.message || 'Error al cargar datos de la obra para edición.', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error al cargar datos de la obra para edición:', error);
+                    showMessageInModal('Error de conexión al cargar datos para edición.', 'error');
+                }
+            });
+
+            containerElement.off('click', '.delete-artwork-button').on('click', '.delete-artwork-button', async function() {
+                const artworkId = $(this).data('artwork-id');
+                const userId = localStorage.getItem('userId');
+                const userToken = localStorage.getItem('userToken');
+
+                if (!confirm('¿Estás seguro de que quieres eliminar esta obra de arte? Esta acción es irreversible.')) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${BASE_API_ENTRYPOINT}?resource=artworks`, {
+                        method: 'POST', // Usamos POST con una acción específica para DELETE
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + userToken
+                        },
+                        body: JSON.stringify({ action: 'delete_artwork', artwork_id: artworkId, user_id: userId })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        showMessageInModal(data.message, 'success');
+                        loadUserProfile(); // Recargar el perfil para actualizar la lista
+                    } else {
+                        showMessageInModal(data.message || 'Error al eliminar la obra.', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error al eliminar obra:', error);
+                    showMessageInModal('Error de conexión al eliminar la obra.', 'error');
                 }
             });
         }
 
         // Manejo de clic para ir al detalle de la obra desde las tarjetas
         containerElement.off('click', '.artwork-card').on('click', '.artwork-card', function(e) {
-            // Evitar que el clic en el botón de quitar favorito también redirija
-            if ($(e.target).hasClass('remove-favorite-button')) {
+            // Evitar que el clic en los botones también redirija
+            if ($(e.target).is('button') || $(e.target).parent().is('button')) {
                 return;
             }
             const artworkId = $(this).data('id');
             window.location.href = `artwork.html?id=${artworkId}`;
         });
     }
+
+    // --- Manejo del formulario de edición del modal ---
+    $editArtworkForm.on('submit', async function(event) {
+        event.preventDefault();
+
+        const artworkId = $('#editArtworkId').val();
+        const ownerId = $('#editArtworkOwnerId').val(); // Este es el userId del propietario
+        const userToken = localStorage.getItem('userToken');
+
+        const formData = new FormData(this);
+        formData.append('action', 'update_artwork'); // Acción para el backend
+        // owner_id ya está en formData gracias al input hidden
+
+        const $submitButton = $(this).find('button[type="submit"]');
+        $submitButton.prop('disabled', true).text('Guardando...');
+        $editArtworkMessage.empty();
+
+        try {
+            const response = await fetch(`${BASE_API_ENTRYPOINT}?resource=artworks`, {
+                method: 'POST', // Usamos POST para manejar FormData con archivos
+                headers: {
+                    'Authorization': 'Bearer ' + userToken
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showMessage($editArtworkMessage, data.message, 'success');
+                showMessageInModal(data.message, 'success');
+                $editArtworkModal.hide(); // Ocultar modal
+                loadUserProfile(); // Recargar perfil para ver los cambios
+            } else {
+                showMessage($editArtworkMessage, data.message || 'Error al guardar cambios.', 'error');
+            }
+        } catch (error) {
+            console.error('Error de red o del servidor al actualizar obra:', error);
+            showMessage($editArtworkMessage, 'Error de conexión. Inténtalo de nuevo más tarde.', 'error');
+        } finally {
+            $submitButton.prop('disabled', false).text('Guardar Cambios');
+        }
+    });
+
+    // --- Cierre del modal ---
+    $closeModalButton.on('click', function() {
+        $editArtworkModal.hide();
+    });
+
+    // Cerrar modal al hacer clic fuera de él
+    $(window).on('click', function(event) {
+        if ($(event.target).is($editArtworkModal)) {
+            $editArtworkModal.hide();
+        }
+    });
+
 
     // --- Manejo del botón de Cerrar Sesión (desde el perfil) ---
     $logoutButton.on('click', handleLogout);

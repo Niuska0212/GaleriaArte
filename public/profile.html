@@ -55,5 +55,45 @@
     <footer class="main-footer">
         <p>&copy; 2025 Galería de Arte. Todos los derechos reservados.</p>
     </footer>
+
+    <!-- Modal para Editar Obra -->
+    <div id="editArtworkModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>Editar Obra de Arte</h2>
+            <form id="editArtworkForm" enctype="multipart/form-data">
+                <input type="hidden" id="editArtworkId" name="artwork_id">
+                <input type="hidden" id="editArtworkOwnerId" name="owner_id">
+                <div class="form-group">
+                    <label for="editArtworkTitle">Título de la Obra:</label>
+                    <input type="text" id="editArtworkTitle" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="editArtworkArtist">Nombre del Artista:</label>
+                    <input type="text" id="editArtworkArtist" name="artist_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="editArtworkDescription">Descripción:</label>
+                    <textarea id="editArtworkDescription" name="description" rows="6"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editArtworkStyle">Estilo:</label>
+                    <input type="text" id="editArtworkStyle" name="style">
+                </div>
+                <div class="form-group">
+                    <label for="editArtworkYear">Año de Creación:</label>
+                    <input type="number" id="editArtworkYear" name="creation_year" min="0" max="2025">
+                </div>
+                <div class="form-group">
+                    <label for="editArtworkImage">Cambiar Imagen (opcional):</label>
+                    <input type="file" id="editArtworkImage" name="artwork_image" accept="image/*">
+                    <small>Solo archivos de imagen (JPG, PNG, GIF). Tamaño máximo: 5MB.</small>
+                    <img id="currentArtworkImagePreview" src="" alt="Imagen actual" style="max-width: 100px; max-height: 100px; margin-top: 10px; border-radius: 5px; display: none;">
+                </div>
+                <button type="submit" class="submit-button">Guardar Cambios</button>
+                <div id="editArtworkMessage" class="message-area"></div>
+            </form>
+        </div>
+    </div>
 </body>
 </html>

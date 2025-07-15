@@ -35,8 +35,6 @@ $(document).ready(function() {
         localStorage.removeItem('userId');
         localStorage.removeItem('username');
         updateAuthNav(); // Actualiza la navegación
-        // Reemplazar alert con un modal o mensaje en el DOM para producción
-        // alert('Sesión cerrada exitosamente.');
         showMessageInModal('Sesión cerrada exitosamente.', 'success'); // Usar función de mensaje
         setTimeout(() => {
             window.location.href = 'index.html'; // Redirigir

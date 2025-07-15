@@ -31,11 +31,38 @@ function handleLogout() {
     localStorage.removeItem('userId');
     localStorage.removeItem('username');
     updateAuthNav(); // Actualiza la navegación
-    alert('Sesión cerrada exitosamente.'); // Usar alert solo para depuración rápida, reemplazar con modal
-    window.location.href = 'index.html'; // Redirigir
+    showMessageInModal('Sesión cerrada exitosamente.', 'success'); // Usar función de mensaje
+    setTimeout(() => {
+        window.location.href = 'index.html'; // Redirigir
+    }, 1500);
 }
 
-// --- Función para mostrar mensajes ---
+// --- Función genérica para mostrar mensajes (reemplazo de alert) ---
+function showMessageInModal(message, type = 'info') {
+    let $messageDiv = $('#globalMessageModal');
+    if ($messageDiv.length === 0) {
+        $messageDiv = $('<div id="globalMessageModal" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); padding: 15px 30px; border-radius: 8px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; font-weight: bold;"></div>');
+        $('body').append($messageDiv);
+    }
+    $messageDiv.text(message).removeClass('success error info').addClass(type);
+
+    if (type === 'success') {
+        $messageDiv.css({'background-color': '#d4edda', 'color': '#155724', 'border': '1px solid #c3e6cb'});
+    } else if (type === 'error') {
+        $messageDiv.css({'background-color': '#f8d7da', 'color': '#721c24', 'border': '1px solid #f5c6cb'});
+    } else { // info
+        $messageDiv.css({'background-color': '#e2e3e5', 'color': '#383d41', 'border': '1px solid #d6d8db'});
+    }
+
+    $messageDiv.fadeIn(300);
+    setTimeout(() => {
+        $messageDiv.fadeOut(300, function() {
+            $(this).empty();
+        });
+    }, 3000);
+}
+
+// --- Función para mostrar mensajes en el formulario específico ---
 function showMessage(element, message, type = 'error') {
     element.text(message).removeClass('success error').addClass(type).fadeIn(300);
     setTimeout(() => {

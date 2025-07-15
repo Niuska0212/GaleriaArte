@@ -35,8 +35,6 @@ $(document).ready(function() {
         localStorage.removeItem('userId');
         localStorage.removeItem('username');
         updateAuthNav(); // Actualiza la navegación inmediatamente
-        // Reemplazar alert con un modal o mensaje en el DOM para producción
-        // alert('Sesión cerrada exitosamente.');
         showMessageInModal('Sesión cerrada exitosamente.', 'success'); // Usar función de mensaje
         setTimeout(() => {
             window.location.href = 'index.html'; // Redirigir a la página principal
@@ -48,7 +46,6 @@ $(document).ready(function() {
         // Implementación simple de un modal/mensaje en el DOM.
         // Para una aplicación real, usarías un div modal oculto que se muestra y oculta.
         console.log(`Mensaje (${type}): ${message}`);
-        // Ejemplo básico:
         let $messageDiv = $('#globalMessageModal');
         if ($messageDiv.length === 0) {
             $messageDiv = $('<div id="globalMessageModal" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); padding: 15px 30px; border-radius: 8px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; font-weight: bold;"></div>');

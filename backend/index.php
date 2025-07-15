@@ -58,14 +58,29 @@ switch ($resource) {
         if ($method === 'GET') {
             handleArtworkGetRequest($conn, $_GET); // Llama a la función del controlador de obras
         } elseif ($method === 'POST') {
-            // Las peticiones POST (subir obra, toggle like) sí requieren autenticación
+            // Las peticiones POST (subir obra, toggle like, eliminar, actualizar) sí requieren autenticación
             $token = getBearerToken();
             if (!validateAuthToken($token)) { // Usando la función de validación de token
                 http_response_code(401);
                 echo json_encode(["message" => "Acceso no autorizado. Token inválido o ausente."]);
                 exit();
             }
-            handleArtworkPostRequest($conn, $input_data, $_POST, $_FILES); // Llama a la función del controlador de obras
+
+            // Determinar la acción del request. Primero buscar en JSON (para delete/toggle_like), luego en POST (para upload/update).
+            $action = $input_data['action'] ?? ($_POST['action'] ?? null);
+
+            if ($action === 'toggle_like') {
+                handleArtworkPostRequest($conn, $input_data, $_POST, $_FILES); // Reutiliza la función para toggle_like
+            } elseif ($action === 'upload_artwork') {
+                handleArtworkPostRequest($conn, $input_data, $_POST, $_FILES); // Reutiliza la función para upload_artwork
+            } elseif ($action === 'delete_artwork') { // NEW: Acción para eliminar obra
+                handleArtworkPostRequest($conn, $input_data, $_POST, $_FILES); // Reutiliza la función para delete_artwork
+            } elseif ($action === 'update_artwork') { // NEW: Acción para actualizar obra
+                handleArtworkPostRequest($conn, $input_data, $_POST, $_FILES); // Reutiliza la función para update_artwork
+            } else {
+                http_response_code(400);
+                echo json_encode(["message" => "Acción POST no válida para obras de arte."]);
+            }
         } else {
             http_response_code(405); // Method Not Allowed
             echo json_encode(["message" => "Método no permitido para obras de arte."]);

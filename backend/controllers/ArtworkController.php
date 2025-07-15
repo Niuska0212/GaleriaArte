@@ -72,14 +72,17 @@ function handleArtworkGetRequest(PDO $conn, $params) {
 }
 
 /**
- * Maneja las peticiones POST para obras de arte (subir obra, toggle like).
+ * Maneja las peticiones POST para obras de arte (subir obra, toggle like, eliminar, actualizar).
  * @param PDO $conn Conexión a la base de datos.
- * @param array $json_data Datos del cuerpo JSON (para toggle_like).
- * @param array $post_data Datos de POST (para upload_artwork).
- * @param array $file_data Datos de archivos subidos ($_FILES, para upload_artwork).
+ * @param array $json_data Datos del cuerpo JSON (para toggle_like, delete_artwork).
+ * @param array $post_data Datos de POST (para upload_artwork, update_artwork).
+ * @param array $file_data Datos de archivos subidos ($_FILES, para upload_artwork, update_artwork).
  */
 function handleArtworkPostRequest(PDO $conn, $json_data, $post_data, $file_data) {
-    if (isset($json_data['action']) && $json_data['action'] === 'toggle_like') {
+    // Determinar la acción del request. Primero buscar en JSON, luego en POST.
+    $action = $json_data['action'] ?? ($post_data['action'] ?? null);
+
+    if ($action === 'toggle_like') {
         if (empty($json_data['artwork_id']) || empty($json_data['user_id'])) {
             http_response_code(400);
             echo json_encode(["message" => "Faltan IDs para la acción de like."]);
@@ -95,7 +98,7 @@ function handleArtworkPostRequest(PDO $conn, $json_data, $post_data, $file_data)
             http_response_code(500);
             echo json_encode(["message" => $result['message']]);
         }
-    } elseif (isset($post_data['action']) && $post_data['action'] === 'upload_artwork') {
+    } elseif ($action === 'upload_artwork') {
         if (empty($file_data['artwork_image'])) {
             http_response_code(400);
             echo json_encode(["message" => "No se ha subido ningún archivo de imagen."]);
@@ -108,6 +111,39 @@ function handleArtworkPostRequest(PDO $conn, $json_data, $post_data, $file_data)
             echo json_encode(["message" => $result['message'], "artwork_id" => $result['artwork_id'], "image_url" => $result['image_url']]);
         } else {
             http_response_code(400); // Bad Request o Internal Server Error
+            echo json_encode(["message" => $result['message']]);
+        }
+    } elseif ($action === 'delete_artwork') { // NEW: Acción para eliminar obra
+        if (empty($json_data['artwork_id']) || empty($json_data['user_id'])) {
+            http_response_code(400);
+            echo json_encode(["message" => "Faltan IDs para eliminar la obra."]);
+            return;
+        }
+        $artworkId = intval($json_data['artwork_id']);
+        $userId = intval($json_data['user_id']);
+        $result = deleteArtworkFunc($conn, $artworkId, $userId);
+        if ($result['success']) {
+            http_response_code(200);
+            echo json_encode(["message" => $result['message']]);
+        } else {
+            http_response_code(403); // Forbidden or 500 Internal Server Error
+            echo json_encode(["message" => $result['message']]);
+        }
+    } elseif ($action === 'update_artwork') { // NEW: Acción para actualizar obra
+        if (empty($post_data['artwork_id']) || empty($post_data['owner_id'])) {
+            http_response_code(400);
+            echo json_encode(["message" => "Faltan datos para actualizar la obra."]);
+            return;
+        }
+        $artworkId = intval($post_data['artwork_id']);
+        $userId = intval($post_data['owner_id']); // owner_id es el user_id para la actualización
+        $file_data_for_update = isset($file_data['artwork_image']) ? $file_data['artwork_image'] : null;
+        $result = updateArtworkFunc($conn, $artworkId, $userId, $post_data, $file_data_for_update);
+        if ($result['success']) {
+            http_response_code(200);
+            echo json_encode(["message" => $result['message'], "image_url" => $result['image_url'] ?? null]);
+        } else {
+            http_response_code(400); // Bad request o 403 Forbidden
             echo json_encode(["message" => $result['message']]);
         }
     } else {
@@ -164,7 +200,7 @@ function getArtworkByIdFunc(PDO $conn, $id) {
     $artworks_table = "artworks";
     $likes_table = "likes";
 
-    $query = "SELECT a.id, a.title, a.artist_name, a.description, a.image_url, a.creation_year, a.style,
+    $query = "SELECT a.id, a.title, a.artist_name, a.description, a.image_url, a.creation_year, a.style, a.owner_id,
                      COUNT(l.id) AS like_count
               FROM " . $artworks_table . " a
               LEFT JOIN " . $likes_table . " l ON a.id = l.artwork_id
@@ -191,13 +227,13 @@ function addArtworkFunc(PDO $conn, $data, $file_data) {
     }
 
     $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
-    $max_size = 15 * 1024 * 1024; // 5 MB
+    $max_size = 5 * 1024 * 1024; // 5 MB
 
     if (!in_array($file_data['type'], $allowed_types)) {
         return ["success" => false, "message" => "Tipo de archivo no permitido. Solo JPG, PNG, GIF."];
     }
     if ($file_data['size'] > $max_size) {
-        return ["success" => false, "message" => "El tamaño del archivo excede el límite de 15MB."];
+        return ["success" => false, "message" => "El tamaño del archivo excede el límite de 5MB."];
     }
     if ($file_data['error'] !== UPLOAD_ERR_OK) {
         return ["success" => false, "message" => "Error al subir el archivo: " . $file_data['error']];
@@ -206,7 +242,7 @@ function addArtworkFunc(PDO $conn, $data, $file_data) {
     $file_extension = pathinfo($file_data['name'], PATHINFO_EXTENSION);
     $new_file_name = uniqid('artwork_', true) . '.' . $file_extension;
     $destination_path = UPLOAD_ARTWORK_DIR . $new_file_name; // Usar la constante
-    $image_url_for_db = 'img/uploaded_artworks/' . $new_file_name;
+    $image_url_for_db = 'public/img/uploaded_artworks/' . $new_file_name;
 
     if (!move_uploaded_file($file_data['tmp_name'], $destination_path)) {
         return ["success" => false, "message" => "No se pudo mover el archivo subido al directorio de destino. Verifique permisos."];
@@ -352,4 +388,152 @@ function getAllArtistsFunc(PDO $conn) {
     $stmt = $conn->prepare($query);
     $stmt->execute();
     return $stmt->fetchAll(PDO::FETCH_COLUMN, 0);
+}
+
+/**
+ * Elimina una obra de arte y su archivo de imagen.
+ * @param PDO $conn Conexión a la base de datos.
+ * @param int $artworkId ID de la obra de arte a eliminar.
+ * @param int $userId ID del usuario que intenta eliminar (para verificar propiedad).
+ * @return array Resultado de la operación (success, message).
+ */
+function deleteArtworkFunc(PDO $conn, $artworkId, $userId) {
+    $artworks_table = "artworks";
+    // Primero, obtener la URL de la imagen y el owner_id para verificar
+    $query = "SELECT image_url, owner_id FROM " . $artworks_table . " WHERE id = :artwork_id LIMIT 1";
+    $stmt = $conn->prepare($query);
+    $stmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
+    $stmt->execute();
+    $artwork = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$artwork) {
+        return ["success" => false, "message" => "Obra de arte no encontrada."];
+    }
+
+    // Verificar si el usuario es el propietario de la obra
+    if ($artwork['owner_id'] != $userId) {
+        return ["success" => false, "message" => "No tienes permiso para eliminar esta obra."];
+    }
+
+    // Iniciar transacción para asegurar la integridad de la base de datos
+    $conn->beginTransaction();
+    try {
+        // Eliminar likes asociados a la obra
+        $deleteLikesQuery = "DELETE FROM likes WHERE artwork_id = :artwork_id";
+        $deleteLikesStmt = $conn->prepare($deleteLikesQuery);
+        $deleteLikesStmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
+        $deleteLikesStmt->execute();
+
+        // Eliminar comentarios asociados a la obra
+        $deleteCommentsQuery = "DELETE FROM comments WHERE artwork_id = :artwork_id";
+        $deleteCommentsStmt = $conn->prepare($deleteCommentsQuery);
+        $deleteCommentsStmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
+        $deleteCommentsStmt->execute();
+
+        // Eliminar la obra de arte de la base de datos
+        $deleteArtworkQuery = "DELETE FROM " . $artworks_table . " WHERE id = :artwork_id";
+        $deleteArtworkStmt = $conn->prepare($deleteArtworkQuery);
+        $deleteArtworkStmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
+        $deleteArtworkStmt->execute();
+
+        // Eliminar el archivo de imagen del servidor
+        $imagePath = __DIR__ . '/../../' . $artwork['image_url']; // Ajusta la ruta si es necesario
+        if (file_exists($imagePath) && is_file($imagePath)) {
+            unlink($imagePath); // Elimina el archivo
+        }
+
+        $conn->commit(); // Confirmar la transacción
+        return ["success" => true, "message" => "Obra de arte eliminada exitosamente."];
+
+    } catch (PDOException $e) {
+        $conn->rollBack(); // Revertir la transacción en caso de error
+        error_log("Error de base de datos al eliminar obra: " . $e->getMessage());
+        return ["success" => false, "message" => "Error interno del servidor al eliminar la obra."];
+    }
+}
+
+/**
+ * Actualiza los detalles de una obra de arte existente.
+ * @param PDO $conn Conexión a la base de datos.
+ * @param int $artworkId ID de la obra de arte a actualizar.
+ * @param int $userId ID del usuario que intenta actualizar (para verificar propiedad).
+ * @param array $data Nuevos datos de la obra (title, artist_name, description, creation_year, style).
+ * @param array|null $file_data Datos del nuevo archivo de imagen subido (opcional).
+ * @return array Resultado de la operación (success, message, new_image_url si se actualizó).
+ */
+function updateArtworkFunc(PDO $conn, $artworkId, $userId, $data, $file_data = null) {
+    $artworks_table = "artworks";
+
+    // Verificar la propiedad primero
+    $checkOwnerQuery = "SELECT owner_id, image_url FROM " . $artworks_table . " WHERE id = :artwork_id LIMIT 1";
+    $checkOwnerStmt = $conn->prepare($checkOwnerQuery);
+    $checkOwnerStmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
+    $checkOwnerStmt->execute();
+    $artwork = $checkOwnerStmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$artwork) {
+        return ["success" => false, "message" => "Obra de arte no encontrada."];
+    }
+    if ($artwork['owner_id'] != $userId) {
+        return ["success" => false, "message" => "No tienes permiso para editar esta obra."];
+    }
+
+    $query = "UPDATE " . $artworks_table . " SET title = :title, artist_name = :artist_name, description = :description, creation_year = :creation_year, style = :style";
+    $params = [
+        ':title' => htmlspecialchars(strip_tags(trim($data['title']))),
+        ':artist_name' => htmlspecialchars(strip_tags(trim($data['artist_name']))),
+        ':description' => isset($data['description']) ? htmlspecialchars(strip_tags(trim($data['description']))) : null,
+        ':creation_year' => isset($data['creation_year']) && is_numeric($data['creation_year']) ? intval($data['creation_year']) : null,
+        ':style' => isset($data['style']) ? htmlspecialchars(strip_tags(trim($data['style']))) : null,
+        ':artwork_id' => $artworkId
+    ];
+
+    $image_url_for_db = $artwork['image_url']; // Mantener la URL de la imagen antigua por defecto
+
+    // Manejar la subida de una nueva imagen si se proporciona
+    if ($file_data && $file_data['error'] === UPLOAD_ERR_OK) {
+        $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+        $max_size = 5 * 1024 * 1024; // 5 MB
+
+        if (!in_array($file_data['type'], $allowed_types)) {
+            return ["success" => false, "message" => "Tipo de archivo no permitido. Solo JPG, PNG, GIF."];
+        }
+        if ($file_data['size'] > $max_size) {
+            return ["success" => false, "message" => "El tamaño del archivo excede el límite de 5MB."];
+        }
+
+        $file_extension = pathinfo($file_data['name'], PATHINFO_EXTENSION);
+        $new_file_name = uniqid('artwork_edit_', true) . '.' . $file_extension;
+        $destination_path = UPLOAD_ARTWORK_DIR . $new_file_name;
+        $image_url_for_db = 'public/img/uploaded_artworks/' . $new_file_name;
+
+        if (!move_uploaded_file($file_data['tmp_name'], $destination_path)) {
+            return ["success" => false, "message" => "No se pudo mover el nuevo archivo subido."];
+        }
+
+        // Eliminar la imagen antigua si se subió una nueva y la antigua existe
+        $oldImagePath = __DIR__ . '/../../' . $artwork['image_url'];
+        if (!empty($artwork['image_url']) && file_exists($oldImagePath) && is_file($oldImagePath)) {
+            unlink($oldImagePath);
+        }
+        $query .= ", image_url = :image_url";
+        $params[':image_url'] = $image_url_for_db;
+    }
+
+    $query .= " WHERE id = :artwork_id";
+    $stmt = $conn->prepare($query);
+
+    foreach ($params as $key => &$val) {
+        $stmt->bindParam($key, $val);
+    }
+
+    try {
+        if ($stmt->execute()) {
+            return ["success" => true, "message" => "Obra de arte actualizada exitosamente.", "image_url" => $image_url_for_db];
+        }
+    } catch (PDOException $e) {
+        error_log("Error de base de datos al actualizar obra: " . $e->getMessage());
+        return ["success" => false, "message" => "Error interno del servidor al actualizar la obra."];
+    }
+    return ["success" => false, "message" => "No se pudo actualizar la obra de arte."];
 }
