@@ -10,7 +10,7 @@ $(document).ready(function() {
     const $searchInput = $('#searchInput');
     const $styleFilter = $('#styleFilter');
     const $artistFilter = $('#artistFilter');
-    const $authNavLink = $('#authNavLink'); // Nuevo: Referencia al enlace de autenticación
+    const $authNavLink = $('#authNavLink'); 
 
     // --- Función para actualizar el enlace de navegación de autenticación ---
     function updateAuthNav() {
