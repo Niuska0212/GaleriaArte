@@ -1,122 +1,103 @@
 <?php
-// proyecto_integrador/backend/controllers/UserController.php
-
-// Ya no necesitamos requerir Database.php aquí, solo se usa la conexión PDO que se pasa.
+// backend/controllers/UserController.php
+require_once __DIR__ . '/../config/database.php';
 
 class UserController {
     private $conn;
-    private $users_table = "users";
-    private $artworks_table = "artworks";
-    private $favorites_table = "favorites";
 
-    // El constructor ahora recibe directamente la conexión PDO
-    public function __construct(PDO $db) {
-        $this->conn = $db;
+    public function __construct() {
+        global $conn;
+        $this->conn = $conn;
     }
 
-    /**
-     * Obtiene la información de un usuario por su ID.
-     * @param int $userId ID del usuario.
-     * @return array|false Datos del usuario o false si no se encuentra.
-     */
-    public function getUserById($userId) {
-        $query = "SELECT id, username, email, profile_image_url, created_at FROM " . $this->users_table . " WHERE id = :id LIMIT 0,1";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':id', $userId, PDO::PARAM_INT);
-        $stmt->execute();
-
+    public function getUserProfile($userId) {
+        $stmt = $this->conn->prepare("SELECT id, username, email, profile_image_url, created_at FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // No devolver el password_hash
-        if ($user) {
-            // La columna password_hash ya no se selecciona, así que no es necesario unset
-            return $user;
-        }
-        return false;
-    }
-
-    /**
-     * Obtiene las obras de arte favoritas de un usuario.
-     * @param int $userId ID del usuario.
-     * @return array Un array de obras de arte favoritas.
-     */
-    public function getUserFavoriteArtworks($userId) {
-        $query = "SELECT a.id, a.title, a.artist_name, a.image_url, a.style
-                  FROM " . $this->favorites_table . " f
-                  JOIN " . $this->artworks_table . " a ON f.artwork_id = a.id
-                  WHERE f.user_id = :user_id
-                  ORDER BY f.created_at DESC";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        $stmt->execute();
-
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    /**
-     * Añade una obra de arte a los favoritos de un usuario.
-     * @param int $userId ID del usuario.
-     * @param int $artworkId ID de la obra de arte.
-     * @return array Resultado de la operación.
-     */
-    public function addFavoriteArtwork($userId, $artworkId) {
-        // Primero, verificar si ya es favorito para evitar duplicados
-        $checkQuery = "SELECT COUNT(*) FROM " . $this->favorites_table . " WHERE user_id = :user_id AND artwork_id = :artwork_id";
-        $checkStmt = $this->conn->prepare($checkQuery);
-        $checkStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        $checkStmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
-        $checkStmt->execute();
-
-        if ($checkStmt->fetchColumn() > 0) {
-            return ["success" => false, "message" => "Esta obra ya está en tus favoritos."];
+        if (!$user) {
+            return ['success' => false, 'message' => 'Usuario no encontrado'];
         }
 
-        $query = "INSERT INTO " . $this->favorites_table . " (user_id, artwork_id) VALUES (:user_id, :artwork_id)";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        $stmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
+        // Obtener obras favoritas
+        $stmt = $this->conn->prepare("
+            SELECT a.* 
+            FROM artworks a
+            JOIN favorites f ON a.id = f.artwork_id
+            WHERE f.user_id = ?
+        ");
+        $stmt->execute([$userId]);
+        $favorites = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        if ($stmt->execute()) {
-            return ["success" => true, "message" => "Obra añadida a favoritos."];
+        // Obtener conteo de likes para cada obra favorita
+        foreach ($favorites as &$favorite) {
+            $stmt = $this->conn->prepare("SELECT COUNT(*) FROM likes WHERE artwork_id = ?");
+            $stmt->execute([$favorite['id']]);
+            $favorite['likes_count'] = $stmt->fetchColumn();
         }
-        return ["success" => false, "message" => "Error al añadir a favoritos."];
+
+        // Obtener obras subidas por el usuario
+        $stmt = $this->conn->prepare("SELECT * FROM artworks WHERE owner_id = ?");
+        $stmt->execute([$userId]);
+        $artworks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return [
+            'success' => true,
+            'user' => $user,
+            'favorites' => $favorites,
+            'artworks' => $artworks
+        ];
     }
 
-    /**
-     * Elimina una obra de arte de los favoritos de un usuario.
-     * @param int $userId ID del usuario.
-     * @param int $artworkId ID de la obra de arte.
-     * @return array Resultado de la operación.
-     */
-    public function removeFavoriteArtwork($userId, $artworkId) {
-        $query = "DELETE FROM " . $this->favorites_table . " WHERE user_id = :user_id AND artwork_id = :artwork_id";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        $stmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
+    public function updateProfile($userId, $data) {
+        $updates = [];
+        $params = [];
 
-        if ($stmt->execute()) {
+        if (!empty($data['username'])) {
+            // Verificar si el nuevo username ya existe
+            $stmt = $this->conn->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
+            $stmt->execute([$data['username'], $userId]);
+            
             if ($stmt->rowCount() > 0) {
-                return ["success" => true, "message" => "Obra eliminada de favoritos."];
-            } else {
-                return ["success" => false, "message" => "La obra no estaba en tus favoritos o no se pudo encontrar."];
+                return ['success' => false, 'message' => 'El nombre de usuario ya está en uso'];
             }
+            
+            $updates[] = "username = ?";
+            $params[] = $data['username'];
         }
-        return ["success" => false, "message" => "Error al eliminar de favoritos."];
-    }
 
-    /**
-     * Verifica si una obra de arte es favorita para un usuario.
-     * @param int $userId ID del usuario.
-     * @param int $artworkId ID de la obra de arte.
-     * @return bool True si es favorita, false en caso contrario.
-     */
-    public function checkFavoriteStatus($userId, $artworkId) {
-        $query = "SELECT COUNT(*) FROM " . $this->favorites_table . " WHERE user_id = :user_id AND artwork_id = :artwork_id";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        $stmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchColumn() > 0;
+        if (!empty($data['email'])) {
+            // Verificar si el nuevo email ya existe
+            $stmt = $this->conn->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
+            $stmt->execute([$data['email'], $userId]);
+            
+            if ($stmt->rowCount() > 0) {
+                return ['success' => false, 'message' => 'El email ya está en uso'];
+            }
+            
+            $updates[] = "email = ?";
+            $params[] = $data['email'];
+        }
+
+        if (!empty($data['profile_image_url'])) {
+            $updates[] = "profile_image_url = ?";
+            $params[] = $data['profile_image_url'];
+        }
+
+        if (!empty($data['password'])) {
+            $updates[] = "password_hash = ?";
+            $params[] = password_hash($data['password'], PASSWORD_BCRYPT);
+        }
+
+        if (empty($updates)) {
+            return ['success' => false, 'message' => 'No hay datos para actualizar'];
+        }
+
+        $params[] = $userId;
+        $sql = "UPDATE users SET " . implode(', ', $updates) . " WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
+
+        return ['success' => true, 'message' => 'Perfil actualizado correctamente'];
     }
 }
-?>

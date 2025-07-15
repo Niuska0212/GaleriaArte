@@ -1,253 +1,179 @@
 <?php
-// proyecto_integrador/backend/controllers/ArtworkController.php
-
+// backend/controllers/ArtworkController.php
+require_once __DIR__ . '/../config/database.php';
 
 class ArtworkController {
     private $conn;
-    private $artworks_table = "artworks";
-    private $likes_table = "likes";
-    private $upload_dir = __DIR__ . '/../../public/img/uploaded_artworks/'; // Directorio para guardar imágenes subidas
 
-    // El constructor ahora recibe directamente la conexión PDO
-    public function __construct(PDO $db) {
-        $this->conn = $db;
-        // Asegurarse de que el directorio de subida exista
-        if (!is_dir($this->upload_dir)) {
-            mkdir($this->upload_dir, 0777, true); // Crea el directorio con permisos de escritura
-        }
+    public function __construct() {
+        global $conn;
+        $this->conn = $conn;
     }
 
-    /**
-     * Obtiene todas las obras de arte, con opciones de búsqueda y filtrado.
-     * También incluye el conteo de likes para cada obra.
-     * @param string $searchTerm Término de búsqueda opcional.
-     * @param string $styleFilter Filtro por estilo opcional.
-     * @param string $artistFilter Filtro por artista opcional.
-     * @return array Array de obras de arte.
-     */
-    public function getAllArtworks($searchTerm = '', $styleFilter = '', $artistFilter = '') {
-        $query = "SELECT a.id, a.title, a.artist_name, a.description, a.image_url, a.creation_year, a.style,
-                         COUNT(l.id) AS like_count
-                  FROM " . $this->artworks_table . " a
-                  LEFT JOIN " . $this->likes_table . " l ON a.id = l.artwork_id
-                  WHERE 1=1"; // Cláusula WHERE base
-
+    public function getAllArtworks($filters = [], $page = 1, $perPage = 12) {
+        $where = [];
         $params = [];
 
-        if (!empty($searchTerm)) {
-            $query .= " AND (a.title LIKE :searchTerm OR a.artist_name LIKE :searchTerm OR a.description LIKE :searchTerm)";
-            $params[':searchTerm'] = '%' . $searchTerm . '%';
-        }
-        if (!empty($styleFilter)) {
-            $query .= " AND a.style = :styleFilter";
-            $params[':styleFilter'] = $styleFilter;
-        }
-        if (!empty($artistFilter)) {
-            $query .= " AND a.artist_name LIKE :artistFilter"; // Usar LIKE si quieres búsqueda parcial de artista
-            $params[':artistFilter'] = '%' . $artistFilter . '%';
+        // Filtros
+        if (!empty($filters['style'])) {
+            $where[] = "style LIKE ?";
+            $params[] = '%' . $filters['style'] . '%';
         }
 
-        $query .= " GROUP BY a.id ORDER BY a.created_at DESC";
+        if (!empty($filters['artist'])) {
+            $where[] = "artist_name LIKE ?";
+            $params[] = '%' . $filters['artist'] . '%';
+        }
 
-        $stmt = $this->conn->prepare($query);
+        // Orden
+        $orderBy = 'created_at DESC';
+        if (!empty($filters['sort'])) {
+            switch ($filters['sort']) {
+                case 'popular':
+                    $orderBy = '(SELECT COUNT(*) FROM likes WHERE artwork_id = artworks.id) DESC';
+                    break;
+                case 'title':
+                    $orderBy = 'title ASC';
+                    break;
+            }
+        }
+
+        $whereClause = empty($where) ? '' : 'WHERE ' . implode(' AND ', $where);
+
+        // Contar total de obras
+        $countStmt = $this->conn->prepare("SELECT COUNT(*) FROM artworks $whereClause");
+        $countStmt->execute($params);
+        $total = $countStmt->fetchColumn();
+
+        // Paginación
+        $offset = ($page - 1) * $perPage;
+        $sql = "SELECT * FROM artworks $whereClause ORDER BY $orderBy LIMIT $offset, $perPage";
+        $stmt = $this->conn->prepare($sql);
         $stmt->execute($params);
+        $artworks = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Obtener conteo de likes para cada obra
+        foreach ($artworks as &$artwork) {
+            $stmt = $this->conn->prepare("SELECT COUNT(*) FROM likes WHERE artwork_id = ?");
+            $stmt->execute([$artwork['id']]);
+            $artwork['likes_count'] = $stmt->fetchColumn();
+        }
+
+        return [
+            'artworks' => $artworks,
+            'total' => $total,
+            'page' => $page,
+            'perPage' => $perPage,
+            'totalPages' => ceil($total / $perPage)
+        ];
     }
 
-    /**
-     * Obtiene una obra de arte específica por su ID.
-     * También incluye el conteo de likes.
-     * @param int $id ID de la obra de arte.
-     * @return array|false Datos de la obra o false si no se encuentra.
-     */
     public function getArtworkById($id) {
-        $query = "SELECT a.id, a.title, a.artist_name, a.description, a.image_url, a.creation_year, a.style,
-                         COUNT(l.id) AS like_count
-                  FROM " . $this->artworks_table . " a
-                  LEFT JOIN " . $this->likes_table . " l ON a.id = l.artwork_id
-                  WHERE a.id = :id
-                  GROUP BY a.id LIMIT 0,1";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-        $stmt->execute();
+        $stmt = $this->conn->prepare("SELECT * FROM artworks WHERE id = ?");
+        $stmt->execute([$id]);
+        $artwork = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$artwork) {
+            return ['success' => false, 'message' => 'Obra no encontrada'];
+        }
+
+        // Obtener conteo de likes
+        $stmt = $this->conn->prepare("SELECT COUNT(*) FROM likes WHERE artwork_id = ?");
+        $stmt->execute([$id]);
+        $artwork['likes_count'] = $stmt->fetchColumn();
+
+        // Obtener artista (si está registrado)
+        if ($artwork['owner_id']) {
+            $stmt = $this->conn->prepare("SELECT username, profile_image_url FROM users WHERE id = ?");
+            $stmt->execute([$artwork['owner_id']]);
+            $artist = $stmt->fetch(PDO::FETCH_ASSOC);
+            $artwork['artist_info'] = $artist;
+        }
+
+        return ['success' => true, 'artwork' => $artwork];
     }
 
-    /**
-     * Añade una nueva obra de arte, incluyendo la subida del archivo de imagen.
-     * @param array $data Datos de la obra (title, artist_name, description, style, creation_year, owner_id).
-     * @param array $file_data Datos del archivo de imagen subido ($_FILES['artwork_image']).
-     * @return array Resultado de la operación (success, message, artwork_id, image_url).
-     */
-    public function addArtwork($data, $file_data) {
-        // Validar datos básicos
-        if (empty($data['title']) || empty($data['artist_name']) || empty($file_data['name'])) {
-            return ["success" => false, "message" => "Título, artista e imagen son campos obligatorios."];
-        }
-
-        // Validar y mover la imagen
-        $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
-        $max_size = 5 * 1024 * 1024; // 5 MB
-
-        if (!in_array($file_data['type'], $allowed_types)) {
-            return ["success" => false, "message" => "Tipo de archivo no permitido. Solo JPG, PNG, GIF."];
-        }
-        if ($file_data['size'] > $max_size) {
-            return ["success" => false, "message" => "El tamaño del archivo excede el límite de 5MB."];
-        }
-        if ($file_data['error'] !== UPLOAD_ERR_OK) {
-            return ["success" => false, "message" => "Error al subir el archivo: " . $file_data['error']];
-        }
-
-        $file_extension = pathinfo($file_data['name'], PATHINFO_EXTENSION);
-        $new_file_name = uniqid('artwork_', true) . '.' . $file_extension;
-        $destination_path = $this->upload_dir . $new_file_name;
-        $image_url_for_db = 'public/img/uploaded_artworks/' . $new_file_name; // Ruta relativa para la DB y el frontend
-
-        if (!move_uploaded_file($file_data['tmp_name'], $destination_path)) {
-            return ["success" => false, "message" => "No se pudo mover el archivo subido al directorio de destino. Verifique permisos."];
-        }
-
-        // Insertar datos en la base de datos
-        $query = "INSERT INTO " . $this->artworks_table . " (title, artist_name, description, image_url, creation_year, style, owner_id)
-                  VALUES (:title, :artist_name, :description, :image_url, :creation_year, :style, :owner_id)";
-        $stmt = $this->conn->prepare($query);
-
-        // Limpiar y enlazar parámetros
-        $title = htmlspecialchars(strip_tags(trim($data['title'])));
-        $artist_name = htmlspecialchars(strip_tags(trim($data['artist_name'])));
-        $description = isset($data['description']) ? htmlspecialchars(strip_tags(trim($data['description']))) : null;
-        $style = isset($data['style']) ? htmlspecialchars(strip_tags(trim($data['style']))) : null;
-        $creation_year = isset($data['creation_year']) && is_numeric($data['creation_year']) ? intval($data['creation_year']) : null;
-        $owner_id = isset($data['owner_id']) && is_numeric($data['owner_id']) ? intval($data['owner_id']) : null;
-
-        $stmt->bindParam(":title", $title);
-        $stmt->bindParam(":artist_name", $artist_name);
-        $stmt->bindParam(":description", $description);
-        $stmt->bindParam(":image_url", $image_url_for_db);
-        $stmt->bindParam(":creation_year", $creation_year, PDO::PARAM_INT);
-        $stmt->bindParam(":style", $style);
-        $stmt->bindParam(":owner_id", $owner_id, PDO::PARAM_INT);
-
-        try {
-            if ($stmt->execute()) {
-                return [
-                    "success" => true,
-                    "message" => "Obra de arte subida exitosamente.",
-                    "artwork_id" => $this->conn->lastInsertId(),
-                    "image_url" => $image_url_for_db
-                ];
+    public function uploadArtwork($data, $imagePath, $userId = null) {
+        // Validar datos
+        $required = ['title', 'artist_name', 'description'];
+        foreach ($required as $field) {
+            if (empty($data[$field])) {
+                return ['success' => false, 'message' => "El campo $field es obligatorio"];
             }
-        } catch (PDOException $e) {
-            // Si hay un error en la DB, intentar eliminar el archivo subido
-            if (file_exists($destination_path)) {
-                unlink($destination_path);
-            }
-            error_log("Error de base de datos al añadir obra: " . $e->getMessage());
-            return ["success" => false, "message" => "Error interno del servidor al guardar la obra."];
         }
 
-        return ["success" => false, "message" => "No se pudo subir la obra de arte."];
+        // Insertar obra
+        $stmt = $this->conn->prepare("
+            INSERT INTO artworks 
+            (title, artist_name, description, image_url, creation_year, style, owner_id) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ");
+
+        $stmt->execute([
+            $data['title'],
+            $data['artist_name'],
+            $data['description'],
+            $imagePath,
+            $data['creation_year'] ?? null,
+            $data['style'] ?? null,
+            $userId
+        ]);
+
+        $artworkId = $this->conn->lastInsertId();
+
+        return [
+            'success' => true,
+            'message' => 'Obra subida exitosamente',
+            'artwork_id' => $artworkId
+        ];
     }
 
-    /**
-     * Alterna el estado de "me gusta" para una obra de arte por un usuario.
-     * Si ya le gusta, lo quita; si no, lo añade.
-     * @param int $artworkId ID de la obra de arte.
-     * @param int $userId ID del usuario.
-     * @return array Resultado de la operación (incluye si ahora le gusta o no, y el nuevo conteo de likes).
-     */
     public function toggleLike($artworkId, $userId) {
-        // Verificar si el usuario ya dio like a esta obra
-        $checkQuery = "SELECT id FROM " . $this->likes_table . " WHERE artwork_id = :artwork_id AND user_id = :user_id LIMIT 0,1";
-        $checkStmt = $this->conn->prepare($checkQuery);
-        $checkStmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
-        $checkStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        $checkStmt->execute();
-        $existingLike = $checkStmt->fetch(PDO::FETCH_ASSOC);
+        // Verificar si ya dio like
+        $stmt = $this->conn->prepare("SELECT id FROM likes WHERE artwork_id = ? AND user_id = ?");
+        $stmt->execute([$artworkId, $userId]);
 
-        $isLiked = false;
-        $message = "";
-
-        if ($existingLike) {
-            // Si ya existe, eliminar el like
-            $deleteQuery = "DELETE FROM " . $this->likes_table . " WHERE id = :id";
-            $deleteStmt = $this->conn->prepare($deleteQuery);
-            $deleteStmt->bindParam(':id', $existingLike['id'], PDO::PARAM_INT);
-            $deleteStmt->execute();
-            $message = "Me gusta eliminado.";
-            $isLiked = false;
+        if ($stmt->rowCount() > 0) {
+            // Quitar like
+            $stmt = $this->conn->prepare("DELETE FROM likes WHERE artwork_id = ? AND user_id = ?");
+            $stmt->execute([$artworkId, $userId]);
+            $action = 'removed';
         } else {
-            // Si no existe, añadir el like
-            $insertQuery = "INSERT INTO " . $this->likes_table . " (artwork_id, user_id) VALUES (:artwork_id, :user_id)";
-            $insertStmt = $this->conn->prepare($insertQuery);
-            $insertStmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
-            $insertStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-            $insertStmt->execute();
-            $message = "Me gusta añadido.";
-            $isLiked = true;
+            // Dar like
+            $stmt = $this->conn->prepare("INSERT INTO likes (artwork_id, user_id) VALUES (?, ?)");
+            $stmt->execute([$artworkId, $userId]);
+            $action = 'added';
         }
 
-        // Obtener el nuevo conteo de likes para la obra
-        $likeCountQuery = "SELECT COUNT(*) AS like_count FROM " . $this->likes_table . " WHERE artwork_id = :artwork_id";
-        $likeCountStmt = $this->conn->prepare($likeCountQuery);
-        $likeCountStmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
-        $likeCountStmt->execute();
-        $likeCount = $likeCountStmt->fetch(PDO::FETCH_ASSOC)['like_count'];
+        // Obtener nuevo conteo de likes
+        $stmt = $this->conn->prepare("SELECT COUNT(*) FROM likes WHERE artwork_id = ?");
+        $stmt->execute([$artworkId]);
+        $likesCount = $stmt->fetchColumn();
 
-        return ["success" => true, "message" => $message, "is_liked" => $isLiked, "like_count" => $likeCount];
+        return [
+            'success' => true,
+            'action' => $action,
+            'likes_count' => $likesCount
+        ];
     }
 
-    /**
-     * Verifica si un usuario ha dado "me gusta" a una obra específica.
-     * @param int $artworkId ID de la obra de arte.
-     * @param int $userId ID del usuario.
-     * @return bool True si le gusta, false en caso contrario.
-     */
-    public function checkLikeStatus($artworkId, $userId) {
-        $query = "SELECT COUNT(*) FROM " . $this->likes_table . " WHERE artwork_id = :artwork_id AND user_id = :user_id";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
-        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchColumn() > 0;
-    }
+    public function toggleFavorite($artworkId, $userId) {
+        // Verificar si ya está en favoritos
+        $stmt = $this->conn->prepare("SELECT id FROM favorites WHERE artwork_id = ? AND user_id = ?");
+        $stmt->execute([$artworkId, $userId]);
 
-    /**
-     * Obtiene el conteo de likes para una obra específica.
-     * @param int $artworkId ID de la obra de arte.
-     * @return int El número de likes.
-     */
-    public function getLikeCount($artworkId) {
-        $query = "SELECT COUNT(*) FROM " . $this->likes_table . " WHERE artwork_id = :artwork_id";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchColumn();
-    }
+        if ($stmt->rowCount() > 0) {
+            // Quitar de favoritos
+            $stmt = $this->conn->prepare("DELETE FROM favorites WHERE artwork_id = ? AND user_id = ?");
+            $stmt->execute([$artworkId, $userId]);
+            $action = 'removed';
+        } else {
+            // Agregar a favoritos
+            $stmt = $this->conn->prepare("INSERT INTO favorites (artwork_id, user_id) VALUES (?, ?)");
+            $stmt->execute([$artworkId, $userId]);
+            $action = 'added';
+        }
 
-    /**
-     * Obtiene una lista de todos los estilos de obras de arte únicos.
-     * @return array Array de estilos.
-     */
-    public function getAllStyles() {
-        $query = "SELECT DISTINCT style FROM " . $this->artworks_table . " WHERE style IS NOT NULL AND style != '' ORDER BY style ASC";
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_COLUMN, 0); // Devuelve un array simple de valores
-    }
-
-    /**
-     * Obtiene una lista de todos los nombres de artistas únicos.
-     * @return array Array de nombres de artistas.
-     */
-    public function getAllArtists() {
-        $query = "SELECT DISTINCT artist_name FROM " . $this->artworks_table . " WHERE artist_name IS NOT NULL AND artist_name != '' ORDER BY artist_name ASC";
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_COLUMN, 0); // Devuelve un array simple de valores
+        return ['success' => true, 'action' => $action];
     }
 }
-?>

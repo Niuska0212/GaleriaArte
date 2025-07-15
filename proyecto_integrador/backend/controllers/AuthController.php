@@ -1,138 +1,71 @@
 <?php
-// proyecto_integrador/backend/controllers/AuthController.php
-
-// Ya no necesitamos requerir Database.php aquí, solo se usa la conexión PDO que se pasa.
+// backend/controllers/AuthController.php
+require_once __DIR__ . '/../config/database.php';
 
 class AuthController {
     private $conn;
-    private $table_name = "users";
 
-    // El constructor ahora recibe directamente la conexión PDO
-    public function __construct(PDO $db) {
-        $this->conn = $db;
+    public function __construct() {
+        global $conn;
+        $this->conn = $conn;
     }
 
-    /**
-     * Registra un nuevo usuario en la base de datos.
-     * @param string $username Nombre de usuario.
-     * @param string $email Correo electrónico.
-     * @param string $password Contraseña (se hasheará).
-     * @return array Resultado del registro (éxito/error, mensaje).
-     */
     public function register($username, $email, $password) {
-        // Validar si el usuario o email ya existen
-        if ($this->userExists($username, $email)) {
-            return ["success" => false, "message" => "El nombre de usuario o email ya está registrado."];
+        // Validar datos
+        if (empty($username) || empty($email) || empty($password)) {
+            return ['success' => false, 'message' => 'Todos los campos son obligatorios'];
         }
 
-        // Hashear la contraseña antes de guardarla
-        $password_hash = password_hash($password, PASSWORD_BCRYPT);
-
-        $query = "INSERT INTO " . $this->table_name . " (username, email, password_hash) VALUES (:username, :email, :password_hash)";
-        $stmt = $this->conn->prepare($query);
-
-        // Limpiar y enlazar parámetros
-        $username = htmlspecialchars(strip_tags(trim($username)));
-        $email = htmlspecialchars(strip_tags(trim($email)));
-
-        $stmt->bindParam(":username", $username);
-        $stmt->bindParam(":email", $email);
-        $stmt->bindParam(":password_hash", $password_hash);
-
-        try {
-            if ($stmt->execute()) {
-                return ["success" => true, "message" => "Usuario registrado exitosamente."];
-            }
-        } catch (PDOException $e) {
-            error_log("Error de base de datos en registro: " . $e->getMessage());
-            return ["success" => false, "message" => "Error interno del servidor al registrar."];
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return ['success' => false, 'message' => 'Email no válido'];
         }
 
-        return ["success" => false, "message" => "No se pudo registrar el usuario."];
+        // Verificar si el usuario o email ya existen
+        $stmt = $this->conn->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
+        $stmt->execute([$username, $email]);
+        
+        if ($stmt->rowCount() > 0) {
+            return ['success' => false, 'message' => 'El nombre de usuario o email ya está en uso'];
+        }
+
+        // Hash de la contraseña
+        $passwordHash = password_hash($password, PASSWORD_BCRYPT);
+
+        // Insertar nuevo usuario
+        $stmt = $this->conn->prepare("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)");
+        $stmt->execute([$username, $email, $passwordHash]);
+
+        return ['success' => true, 'message' => 'Registro exitoso'];
     }
 
-    /**
-     * Autentica a un usuario.
-     * @param string $identifier Nombre de usuario o email.
-     * @param string $password Contraseña proporcionada.
-     * @return array Resultado de la autenticación (éxito/error, mensaje, datos del usuario, token).
-     */
-    public function login($identifier, $password) {
-        // Limpiar el identificador (username o email)
-        $identifier = htmlspecialchars(strip_tags(trim($identifier)));
+    public function login($username, $password) {
+        // Obtener usuario por username o email
+        $stmt = $this->conn->prepare("SELECT * FROM users WHERE username = ? OR email = ?");
+        $stmt->execute([$username, $username]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Buscar usuario por username o email
-        $query = "SELECT id, username, email, password_hash, created_at FROM " . $this->table_name . " WHERE username = :identifier OR email = :identifier LIMIT 0,1";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":identifier", $identifier);
-
-        try {
-            $stmt->execute();
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($user) {
-                // Usuario encontrado, verificar contraseña
-                if (password_verify($password, $user['password_hash'])) {
-                    // Contraseña correcta, generar token (simulado por ahora, luego JWT)
-                    $token = bin2hex(random_bytes(32));
-
-                    return [
-                        "success" => true,
-                        "message" => "Inicio de sesión exitoso.",
-                        "user" => [
-                            "id" => $user['id'],
-                            "username" => $user['username'],
-                            "email" => $user['email'],
-                            "created_at" => $user['created_at']
-                        ],
-                        "token" => $token
-                    ];
-                } else {
-                    // Contraseña incorrecta
-                    error_log("Intento de login fallido para: " . $identifier . " - Contraseña incorrecta.");
-                    return ["success" => false, "message" => "Credenciales incorrectas."];
-                }
-            } else {
-                // Usuario no encontrado
-                error_log("Intento de login fallido para: " . $identifier . " - Usuario no encontrado.");
-                return ["success" => false, "message" => "Credenciales incorrectas."];
-            }
-        } catch (PDOException $e) {
-            error_log("Error de base de datos en login: " . $e->getMessage());
-            return ["success" => false, "message" => "Error interno del servidor."];
+        if (!$user || !password_verify($password, $user['password_hash'])) {
+            return ['success' => false, 'message' => 'Credenciales incorrectas'];
         }
+
+        // Iniciar sesión (en un entorno real usarías session_start() o JWT)
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['username'] = $user['username'];
+
+        return [
+            'success' => true,
+            'user' => [
+                'id' => $user['id'],
+                'username' => $user['username'],
+                'email' => $user['email'],
+                'profile_image_url' => $user['profile_image_url']
+            ]
+        ];
     }
 
-    /**
-     * Verifica si un usuario con el mismo username o email ya existe.
-     * @param string $username
-     * @param string $email
-     * @return bool True si existe, false si no.
-     */
-    private function userExists($username, $email) {
-        $query = "SELECT id FROM " . $this->table_name . " WHERE username = :username OR email = :email LIMIT 0,1";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":username", $username);
-        $stmt->bindParam(":email", $email);
-        try {
-            $stmt->execute();
-            return $stmt->rowCount() > 0;
-        } catch (PDOException $e) {
-            error_log("Error de base de datos en userExists: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Valida un token de autenticación (simulado).
-     * @param string $token El token a validar.
-     * @return int|false El ID del usuario si el token es válido, false en caso contrario.
-     */
-    public function validateToken($token) {
-        if (!empty($token) && strlen($token) > 10) {
-            return true;
-        }
-        return false;
+    public function logout() {
+        session_unset();
+        session_destroy();
+        return ['success' => true];
     }
 }
-?>

@@ -1,64 +1,66 @@
 <?php
-// proyecto_integrador/backend/controllers/CommentController.php
-
+// backend/controllers/CommentController.php
+require_once __DIR__ . '/../config/database.php';
 
 class CommentController {
     private $conn;
-    private $comments_table = "comments";
-    private $users_table = "users"; // Para obtener el nombre de usuario
 
-    // El constructor ahora recibe directamente la conexión PDO
-    public function __construct(PDO $db) {
-        $this->conn = $db;
+    public function __construct() {
+        global $conn;
+        $this->conn = $conn;
     }
 
-    /**
-     * Obtiene todos los comentarios para una obra de arte específica.
-     * Incluye el nombre de usuario del autor del comentario.
-     * @param int $artworkId ID de la obra de arte.
-     * @return array Array de comentarios.
-     */
-    public function getCommentsByArtworkId($artworkId) {
-        $query = "SELECT c.id, c.comment_text, c.created_at, u.username
-                  FROM " . $this->comments_table . " c
-                  JOIN " . $this->users_table . " u ON c.user_id = u.id
-                  WHERE c.artwork_id = :artwork_id
-                  ORDER BY c.created_at DESC";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
-        $stmt->execute();
+    public function getCommentsByArtwork($artworkId) {
+        $stmt = $this->conn->prepare("
+            SELECT c.*, u.username, u.profile_image_url 
+            FROM comments c
+            JOIN users u ON c.user_id = u.id
+            WHERE c.artwork_id = ?
+            ORDER BY c.created_at DESC
+        ");
+        $stmt->execute([$artworkId]);
+        $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return ['success' => true, 'comments' => $comments];
     }
 
-    /**
-     * Añade un nuevo comentario a una obra de arte.
-     * @param int $artworkId ID de la obra de arte.
-     * @param int $userId ID del usuario que comenta.
-     * @param string $commentText El texto del comentario.
-     * @return array Resultado de la operación.
-     */
     public function addComment($artworkId, $userId, $commentText) {
-        $query = "INSERT INTO " . $this->comments_table . " (artwork_id, user_id, comment_text) VALUES (:artwork_id, :user_id, :comment_text)";
-        $stmt = $this->conn->prepare($query);
-
-        $commentText = htmlspecialchars(strip_tags(trim($commentText))); // Limpiar y trim() el texto
-
-        $stmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
-        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        $stmt->bindParam(':comment_text', $commentText);
-
-        try {
-            if ($stmt->execute()) {
-                return ["success" => true, "message" => "Comentario añadido exitosamente."];
-            }
-        } catch (PDOException $e) {
-            error_log("Error de base de datos al añadir comentario: " . $e->getMessage());
-            return ["success" => false, "message" => "Error interno del servidor al añadir el comentario."];
+        if (empty($commentText)) {
+            return ['success' => false, 'message' => 'El comentario no puede estar vacío'];
         }
-        return ["success" => false, "message" => "No se pudo añadir el comentario."];
+
+        $stmt = $this->conn->prepare("
+            INSERT INTO comments (artwork_id, user_id, comment_text)
+            VALUES (?, ?, ?)
+        ");
+        $stmt->execute([$artworkId, $userId, $commentText]);
+
+        // Obtener el comentario recién creado con información del usuario
+        $commentId = $this->conn->lastInsertId();
+        $stmt = $this->conn->prepare("
+            SELECT c.*, u.username, u.profile_image_url 
+            FROM comments c
+            JOIN users u ON c.user_id = u.id
+            WHERE c.id = ?
+        ");
+        $stmt->execute([$commentId]);
+        $comment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return ['success' => true, 'comment' => $comment];
     }
 
-    // Aquí se pueden añadir métodos para actualizar o eliminar comentarios (con validación de usuario)
+    public function deleteComment($commentId, $userId) {
+        // Verificar que el comentario pertenece al usuario
+        $stmt = $this->conn->prepare("SELECT id FROM comments WHERE id = ? AND user_id = ?");
+        $stmt->execute([$commentId, $userId]);
+
+        if ($stmt->rowCount() === 0) {
+            return ['success' => false, 'message' => 'No tienes permiso para eliminar este comentario'];
+        }
+
+        $stmt = $this->conn->prepare("DELETE FROM comments WHERE id = ?");
+        $stmt->execute([$commentId]);
+
+        return ['success' => true, 'message' => 'Comentario eliminado correctamente'];
+    }
 }
-?>

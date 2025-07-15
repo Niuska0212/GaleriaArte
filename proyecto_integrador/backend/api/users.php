@@ -1,146 +1,40 @@
 <?php
-// proyecto_integrador/backend/api/users.php
-
-// Establece las cabeceras para permitir CORS y especificar el tipo de contenido JSON
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS"); // GET para perfil, POST para añadir/quitar favoritos
-header("Access-Control-Max-Age: 3600");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-
-// Si es una petición OPTIONS (preflight), responde con 200 OK
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
-
-// Incluye la clase Database desde config/database.php y los controladores
-require_once __DIR__ . '/../config/database.php'; // Ahora incluye la clase Database
-require_once __DIR__ . '/../controllers/AuthController.php'; // Para validar el token
+// backend/api/users.php
 require_once __DIR__ . '/../controllers/UserController.php';
 
-// Obtiene la conexión a la base de datos
-$database = new Database(); // Instancia la clase Database
-$db = $database->getConnection(); // Obtiene la conexión PDO
+header('Content-Type: application/json');
+session_start();
 
-// Crea instancias de los controladores
-$authController = new AuthController($db);
-$userController = new UserController($db);
+$userController = new UserController();
 
-// Función para obtener el token de la cabecera Authorization
-function getBearerToken() {
-    $headers = getallheaders(); // Obtiene todas las cabeceras HTTP
-    if (isset($headers['Authorization'])) {
-        $matches = [];
-        // Busca un token que empiece con "Bearer "
-        if (preg_match('/Bearer\s(\S+)/', $headers['Authorization'], $matches)) {
-            return $matches[1];
-        }
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    // Obtener perfil de usuario
+    $userId = $_GET['id'] ?? ($_SESSION['user_id'] ?? 0);
+    
+    if (empty($userId)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'ID de usuario no proporcionado']);
+        exit;
     }
-    return null;
+    
+    $response = $userController->getUserProfile($userId);
+    echo json_encode($response);
+    exit;
 }
 
-// Obtener el token de la cabecera
-$token = getBearerToken();
-
-// Validar el token antes de proceder con peticiones que requieren autenticación
-// NOTA: La validación de token en AuthController.php es MUY BÁSICA para este ejemplo.
-// En un entorno real, aquí se decodificaría y validaría un JWT.
-if (!$authController->validateToken($token)) {
-    http_response_code(401); // Unauthorized
-    echo json_encode(["message" => "Acceso no autorizado. Token inválido o ausente."]);
-    exit();
+if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
+    // Actualizar perfil (requiere autenticación)
+    if (empty($_SESSION['user_id'])) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'No autorizado']);
+        exit;
+    }
+    
+    parse_str(file_get_contents('php://input'), $data);
+    $response = $userController->updateProfile($_SESSION['user_id'], $data);
+    echo json_encode($response);
+    exit;
 }
 
-$request_method = $_SERVER["REQUEST_METHOD"];
-
-switch ($request_method) {
-    case 'GET':
-        // Lógica para obtener datos del usuario o sus favoritos
-        if (isset($_GET["id"])) {
-            $userId = intval($_GET["id"]);
-
-            if (isset($_GET["action"]) && $_GET["action"] === "favorites") {
-                // Obtener obras favoritas del usuario
-                $favorites = $userController->getUserFavoriteArtworks($userId);
-                if ($favorites !== false) {
-                    http_response_code(200);
-                    echo json_encode($favorites);
-                } else {
-                    http_response_code(404);
-                    echo json_encode(["message" => "No se encontraron favoritos para este usuario."]);
-                }
-            } elseif (isset($_GET["action"]) && $_GET["action"] === "check_favorite") {
-                // Verificar si una obra es favorita para un usuario
-                if (empty($_GET['artwork_id']) || empty($_GET['user_id'])) {
-                    http_response_code(400);
-                    echo json_encode(["message" => "Faltan IDs para verificar favorito."]);
-                    exit();
-                }
-                $artworkId = intval($_GET['artwork_id']);
-                $userId = intval($_GET['user_id']);
-                $isFavorite = $userController->checkFavoriteStatus($userId, $artworkId);
-                http_response_code(200);
-                echo json_encode(["is_favorite" => $isFavorite]);
-            } else {
-                // Obtener datos del perfil del usuario
-                $user = $userController->getUserById($userId);
-                if ($user) {
-                    http_response_code(200);
-                    echo json_encode($user);
-                } else {
-                    http_response_code(404);
-                    echo json_encode(["message" => "Usuario no encontrado."]);
-                }
-            }
-        } else {
-            http_response_code(400); // Bad Request
-            echo json_encode(["message" => "ID de usuario no especificado."]);
-        }
-        break;
-
-    case 'POST':
-        // Lógica para añadir/quitar favoritos
-        $data = json_decode(file_get_contents("php://input"));
-
-        if (!isset($data->action) || !isset($data->userId) || !isset($data->artworkId)) {
-            http_response_code(400);
-            echo json_encode(["message" => "Faltan datos para la acción de favoritos."]);
-            exit();
-        }
-
-        $userId = intval($data->userId);
-        $artworkId = intval($data->artworkId);
-
-        if ($data->action === "add_favorite") {
-            $result = $userController->addFavoriteArtwork($userId, $artworkId);
-            if ($result['success']) {
-                http_response_code(200);
-                echo json_encode(["message" => $result['message']]);
-            } else {
-                http_response_code(409); // Conflict
-                echo json_encode(["message" => $result['message']]);
-            }
-        } elseif ($data->action === "remove_favorite") {
-            $result = $userController->removeFavoriteArtwork($userId, $artworkId);
-            if ($result['success']) {
-                http_response_code(200);
-                echo json_encode(["message" => $result['message']]);
-            } else {
-                http_response_code(404); // Not Found o Conflict
-                echo json_encode(["message" => $result['message']]);
-            }
-        } else {
-            http_response_code(400);
-            echo json_encode(["message" => "Acción de favoritos no válida."]);
-        }
-        break;
-
-    default:
-        http_response_code(405); // Method Not Allowed
-        echo json_encode(["message" => "Método no permitido."]);
-        break;
-}
-
-// No es necesario cerrar la conexión explícitamente aquí.
-?>
+http_response_code(405);
+echo json_encode(['success' => false, 'message' => 'Método no permitido']);
