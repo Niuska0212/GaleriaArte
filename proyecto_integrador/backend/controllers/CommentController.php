@@ -1,66 +1,101 @@
 <?php
-// backend/controllers/CommentController.php
-require_once __DIR__ . '/../config/database.php';
+// backend/controllers/CommentController.php (Procedural)
 
-class CommentController {
-    private $conn;
+/**
+ * Maneja las peticiones GET para comentarios.
+ * @param PDO $conn Conexión a la base de datos.
+ * @param array $params Parámetros GET.
+ */
+function handleCommentGetRequest(PDO $conn, $params) {
+    if (!isset($params["artwork_id"])) {
+        http_response_code(400);
+        echo json_encode(["message" => "ID de obra de arte no especificado para comentarios."]);
+        return;
+    }
+    $artworkId = intval($params["artwork_id"]);
+    $comments = getCommentsByArtworkIdFunc($conn, $artworkId);
+    if ($comments !== false) {
+        http_response_code(200);
+        echo json_encode($comments);
+    } else {
+        http_response_code(404);
+        echo json_encode(["message" => "No se encontraron comentarios para esta obra."]);
+    }
+}
 
-    public function __construct() {
-        global $conn;
-        $this->conn = $conn;
+/**
+ * Maneja las peticiones POST para comentarios (añadir comentario).
+ * @param PDO $conn Conexión a la base de datos.
+ * @param array $data Datos del cuerpo JSON.
+ */
+function handleCommentPostRequest(PDO $conn, $data) {
+    if (empty($data['artwork_id']) || empty($data['user_id']) || empty($data['comment_text'])) {
+        http_response_code(400);
+        echo json_encode(["message" => "Faltan datos para el comentario."]);
+        return;
     }
 
-    public function getCommentsByArtwork($artworkId) {
-        $stmt = $this->conn->prepare("
-            SELECT c.*, u.username, u.profile_image_url 
-            FROM comments c
-            JOIN users u ON c.user_id = u.id
-            WHERE c.artwork_id = ?
-            ORDER BY c.created_at DESC
-        ");
-        $stmt->execute([$artworkId]);
-        $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $artworkId = intval($data['artwork_id']);
+    $userId = intval($data['user_id']);
+    $commentText = $data['comment_text'];
 
-        return ['success' => true, 'comments' => $comments];
+    $result = addCommentFunc($conn, $artworkId, $userId, $commentText);
+    if ($result['success']) {
+        http_response_code(201); // Created
+        echo json_encode(["message" => $result['message']]);
+    } else {
+        http_response_code(500); // Internal Server Error
+        echo json_encode(["message" => $result['message']]);
     }
+}
 
-    public function addComment($artworkId, $userId, $commentText) {
-        if (empty($commentText)) {
-            return ['success' => false, 'message' => 'El comentario no puede estar vacío'];
+/**
+ * Obtiene todos los comentarios para una obra de arte específica.
+ * @param PDO $conn Conexión a la base de datos.
+ * @param int $artworkId ID de la obra de arte.
+ * @return array Array de comentarios.
+ */
+function getCommentsByArtworkIdFunc(PDO $conn, $artworkId) {
+    $comments_table = "comments";
+    $users_table = "users";
+
+    $query = "SELECT c.id, c.comment_text, c.created_at, u.username
+              FROM " . $comments_table . " c
+              JOIN " . $users_table . " u ON c.user_id = u.id
+              WHERE c.artwork_id = :artwork_id
+              ORDER BY c.created_at DESC";
+    $stmt = $conn->prepare($query);
+    $stmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Añade un nuevo comentario a una obra de arte.
+ * @param PDO $conn Conexión a la base de datos.
+ * @param int $artworkId ID de la obra de arte.
+ * @param int $userId ID del usuario que comenta.
+ * @param string $commentText El texto del comentario.
+ * @return array Resultado de la operación.
+ */
+function addCommentFunc(PDO $conn, $artworkId, $userId, $commentText) {
+    $comments_table = "comments";
+    $query = "INSERT INTO " . $comments_table . " (artwork_id, user_id, comment_text) VALUES (:artwork_id, :user_id, :comment_text)";
+    $stmt = $conn->prepare($query);
+
+    $commentText = htmlspecialchars(strip_tags(trim($commentText)));
+
+    $stmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
+    $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+    $stmt->bindParam(':comment_text', $commentText);
+
+    try {
+        if ($stmt->execute()) {
+            return ["success" => true, "message" => "Comentario añadido exitosamente."];
         }
-
-        $stmt = $this->conn->prepare("
-            INSERT INTO comments (artwork_id, user_id, comment_text)
-            VALUES (?, ?, ?)
-        ");
-        $stmt->execute([$artworkId, $userId, $commentText]);
-
-        // Obtener el comentario recién creado con información del usuario
-        $commentId = $this->conn->lastInsertId();
-        $stmt = $this->conn->prepare("
-            SELECT c.*, u.username, u.profile_image_url 
-            FROM comments c
-            JOIN users u ON c.user_id = u.id
-            WHERE c.id = ?
-        ");
-        $stmt->execute([$commentId]);
-        $comment = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        return ['success' => true, 'comment' => $comment];
+    } catch (PDOException $e) {
+        error_log("Error de base de datos al añadir comentario: " . $e->getMessage());
+        return ["success" => false, "message" => "Error interno del servidor al añadir el comentario."];
     }
-
-    public function deleteComment($commentId, $userId) {
-        // Verificar que el comentario pertenece al usuario
-        $stmt = $this->conn->prepare("SELECT id FROM comments WHERE id = ? AND user_id = ?");
-        $stmt->execute([$commentId, $userId]);
-
-        if ($stmt->rowCount() === 0) {
-            return ['success' => false, 'message' => 'No tienes permiso para eliminar este comentario'];
-        }
-
-        $stmt = $this->conn->prepare("DELETE FROM comments WHERE id = ?");
-        $stmt->execute([$commentId]);
-
-        return ['success' => true, 'message' => 'Comentario eliminado correctamente'];
-    }
+    return ["success" => false, "message" => "No se pudo añadir el comentario."];
 }

@@ -1,175 +1,146 @@
-// public/js/auth.js
-document.addEventListener('DOMContentLoaded', function() {
-    // Elementos del DOM
-    const loginForm = document.getElementById('loginForm');
-    const registerForm = document.getElementById('registerForm');
-    const showLogin = document.getElementById('showLogin');
-    const showRegister = document.getElementById('showRegister');
-    const loginMessage = document.getElementById('loginMessage');
-    const registerMessage = document.getElementById('registerMessage');
-    
-    // Mostrar formulario de login
-    showLogin.addEventListener('click', function(e) {
-        e.preventDefault();
-        loginForm.classList.add('active');
-        registerForm.classList.remove('active');
-        showLogin.classList.add('active');
-        showRegister.classList.remove('active');
-        loginMessage.textContent = '';
-        registerMessage.textContent = '';
-    });
-    
-    // Mostrar formulario de registro
-    showRegister.addEventListener('click', function(e) {
-        e.preventDefault();
-        registerForm.classList.add('active');
-        loginForm.classList.remove('active');
-        showRegister.classList.add('active');
-        showLogin.classList.remove('active');
-        loginMessage.textContent = '';
-        registerMessage.textContent = '';
-    });
-    
-    // Manejar login
-    loginForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const username = document.getElementById('loginUsername').value;
-        const password = document.getElementById('loginPassword').value;
-        
-        // Validación básica
-        if (!username || !password) {
-            showError(loginMessage, 'Todos los campos son obligatorios');
-            return;
-        }
-        
-        try {
-            const response = await fetch('/backend/api/auth.php?action=login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    username: username,
-                    password: password
-                })
+// Define la URL base de tu API, apuntando al único punto de entrada (index.php)
+const BASE_API_ENTRYPOINT = 'backend/index.php'; // Ruta relativa desde la raíz del proyecto
+
+$(document).ready(function() {
+    console.log("auth.js cargado.");
+
+    const $loginForm = $('#loginForm');
+    const $registerForm = $('#registerForm');
+    const $loginMessage = $('#loginMessage');
+    const $registerMessage = $('#registerMessage');
+    const $showLoginButton = $('#showLogin');
+    const $showRegisterButton = $('#showRegister');
+
+    // --- Función para mostrar mensajes ---
+    function showMessage(element, message, type = 'error') {
+        element.text(message).removeClass('success error').addClass(type).fadeIn(300);
+        setTimeout(() => {
+            element.fadeOut(300, function() {
+                $(this).empty();
             });
-            
-            const data = await response.json();
-            
-            if (!data.success) {
-                showError(loginMessage, data.message);
-                return;
-            }
-            
-            // Login exitoso - redirigir o actualizar UI
-            showSuccess(loginMessage, 'Inicio de sesión exitoso');
-            
-            // Redirigir después de 1 segundo
-            setTimeout(() => {
-                const redirectUrl = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
-                window.location.href = redirectUrl;
-            }, 1000);
-            
-        } catch (error) {
-            console.error('Error:', error);
-            showError(loginMessage, 'Error al conectar con el servidor');
-        }
+        }, 5000);
+    }
+
+    // --- Alternar entre formularios de Login y Registro ---
+    $showLoginButton.on('click', function() {
+        $loginForm.removeClass('hidden').addClass('active').show();
+        $registerForm.removeClass('active').addClass('hidden').hide();
+        $showLoginButton.addClass('active');
+        $showRegisterButton.removeClass('active');
+        $loginMessage.empty();
+        $registerMessage.empty();
     });
-    
-    // Manejar registro
-    registerForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const username = document.getElementById('registerUsername').value;
-        const email = document.getElementById('registerEmail').value;
-        const password = document.getElementById('registerPassword').value;
-        const confirmPassword = document.getElementById('registerConfirmPassword').value;
-        
-        // Validaciones
-        if (!username || !email || !password || !confirmPassword) {
-            showError(registerMessage, 'Todos los campos son obligatorios');
-            return;
-        }
-        
+
+    $showRegisterButton.on('click', function() {
+        $registerForm.removeClass('hidden').addClass('active').show();
+        $loginForm.removeClass('active').addClass('hidden').hide();
+        $showRegisterButton.addClass('active');
+        $showLoginButton.removeClass('active');
+        $loginMessage.empty();
+        $registerMessage.empty();
+    });
+
+    // --- Manejo del Formulario de Registro ---
+    $registerForm.on('submit', async function(event) {
+        event.preventDefault();
+
+        const username = $('#registerUsername').val();
+        const email = $('#registerEmail').val();
+        const password = $('#registerPassword').val();
+        const confirmPassword = $('#registerConfirmPassword').val();
+
         if (password !== confirmPassword) {
-            showError(registerMessage, 'Las contraseñas no coinciden');
+            showMessage($registerMessage, 'Las contraseñas no coinciden.', 'error');
             return;
         }
-        
+
         if (password.length < 6) {
-            showError(registerMessage, 'La contraseña debe tener al menos 6 caracteres');
+            showMessage($registerMessage, 'La contraseña debe tener al menos 6 caracteres.', 'error');
             return;
         }
-        
-        if (!validateEmail(email)) {
-            showError(registerMessage, 'Ingresa un email válido');
-            return;
-        }
-        
+
+        const $submitButton = $(this).find('button[type="submit"]');
+        $submitButton.prop('disabled', true).text('Registrando...');
+        $registerMessage.empty();
+
         try {
-            const response = await fetch('/backend/api/auth.php?action=register', {
+            // Apunta al único punto de entrada y especifica el recurso
+            const response = await fetch(`${BASE_API_ENTRYPOINT}?resource=auth`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
+                    action: 'register',
                     username: username,
                     email: email,
                     password: password
                 })
             });
-            
+
             const data = await response.json();
-            
-            if (!data.success) {
-                showError(registerMessage, data.message);
-                return;
+
+            if (response.ok) {
+                showMessage($registerMessage, data.message, 'success');
+                setTimeout(() => {
+                    $showLoginButton.trigger('click');
+                    $('#loginUsername').val(username);
+                }, 2000);
+            } else {
+                showMessage($registerMessage, data.message || 'Error en el registro.', 'error');
             }
-            
-            // Registro exitoso - mostrar mensaje y cambiar a login
-            showSuccess(registerMessage, 'Registro exitoso. Por favor inicia sesión.');
-            
-            // Cambiar al formulario de login después de 2 segundos
-            setTimeout(() => {
-                loginForm.classList.add('active');
-                registerForm.classList.remove('active');
-                showLogin.classList.add('active');
-                showRegister.classList.remove('active');
-                registerMessage.textContent = '';
-                
-                // Rellenar los campos de login
-                document.getElementById('loginUsername').value = username;
-                document.getElementById('loginPassword').value = password;
-            }, 2000);
-            
         } catch (error) {
-            console.error('Error:', error);
-            showError(registerMessage, 'Error al conectar con el servidor');
+            console.error('Error de red o del servidor:', error);
+            showMessage($registerMessage, 'Error de conexión. Inténtalo de nuevo más tarde.', 'error');
+        } finally {
+            $submitButton.prop('disabled', false).text('Registrarse');
         }
     });
-    
-    // Funciones auxiliares
-    function showError(element, message) {
-        element.textContent = message;
-        element.className = 'message-area error';
-    }
-    
-    function showSuccess(element, message) {
-        element.textContent = message;
-        element.className = 'message-area success';
-    }
-    
-    function validateEmail(email) {
-        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return re.test(email);
-    }
-    
-    // Verificar si hay parámetros de redirección para mostrar login/register
-    const urlParams = new URLSearchParams(window.location.search);
-    const show = urlParams.get('show');
-    
-    if (show === 'register') {
-        showRegister.click();
-    }
+
+    // --- Manejo del Formulario de Inicio de Sesión ---
+    $loginForm.on('submit', async function(event) {
+        event.preventDefault();
+
+        const username = $('#loginUsername').val();
+        const password = $('#loginPassword').val();
+
+        const $submitButton = $(this).find('button[type="submit"]');
+        $submitButton.prop('disabled', true).text('Iniciando Sesión...');
+        $loginMessage.empty();
+
+        try {
+            // Apunta al único punto de entrada y especifica el recurso
+            const response = await fetch(`${BASE_API_ENTRYPOINT}?resource=auth`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'login',
+                    username: username,
+                    password: password
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showMessage($loginMessage, data.message, 'success');
+                localStorage.setItem('userToken', data.token);
+                localStorage.setItem('userId', data.user.id);
+                localStorage.setItem('username', data.user.username);
+
+                setTimeout(() => {
+                    window.location.href = 'profile.html';
+                }, 1500);
+            } else {
+                showMessage($loginMessage, data.message || 'Error al iniciar sesión.', 'error');
+            }
+        } catch (error) {
+            console.error('Error de red o del servidor:', error);
+            showMessage($loginMessage, 'Error de conexión. Inténtalo de nuevo más tarde.', 'error');
+        } finally {
+            $submitButton.prop('disabled', false).text('Iniciar Sesión');
+        }
+    });
 });

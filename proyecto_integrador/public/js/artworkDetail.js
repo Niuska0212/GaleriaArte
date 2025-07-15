@@ -1,293 +1,320 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const artworkDetailContent = document.getElementById('artworkDetailContent');
-    const likeButton = document.getElementById('likeButton');
-    const saveButton = document.getElementById('saveButton');
-    const likeCount = document.getElementById('likeCount');
-    const commentsList = document.getElementById('commentsList');
-    const commentForm = document.getElementById('commentForm');
-    const commentText = document.getElementById('commentText');
-    const commentMessage = document.getElementById('commentMessage');
-    
-    // Obtener ID de la obra de la URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const artworkId = urlParams.get('id');
-    
-    if (!artworkId) {
-        window.location.href = 'index.html';
-        return;
+// Define la URL base de tu API, apuntando al único punto de entrada (index.php)
+const BASE_API_ENTRYPOINT = 'backend/index.php'; // Ruta relativa desde la raíz del proyecto
+
+$(document).ready(function() {
+    console.log("artworkDetail.js cargado.");
+
+    const $artworkDetailContent = $('#artworkDetailContent');
+    const $likeButton = $('#likeButton');
+    const $likeCount = $('#likeCount');
+    const $saveButton = $('#saveButton');
+    const $commentsList = $('#commentsList');
+    const $commentForm = $('#commentForm');
+    const $commentText = $('#commentText');
+    const $commentMessage = $('#commentMessage');
+
+    let currentArtworkId = null;
+
+    // --- Función para obtener el ID de la obra de la URL ---
+    function getArtworkIdFromUrl() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('id');
     }
-    
-    // Cargar datos de la obra
-    loadArtworkDetail();
-    loadComments();
-    checkAuthStatus();
-    
-    // Event listeners
-    likeButton.addEventListener('click', handleLike);
-    saveButton.addEventListener('click', handleSave);
-    commentForm.addEventListener('submit', handleCommentSubmit);
-    
-    // Funciones
-    async function loadArtworkDetail() {
+
+    // --- Función para mostrar mensajes ---
+    function showMessage(element, message, type = 'error') {
+        element.text(message).removeClass('success error').addClass(type).fadeIn(300);
+        setTimeout(() => {
+            element.fadeOut(300, function() {
+                $(this).empty();
+            });
+        }, 5000);
+    }
+
+    // --- Función para verificar el estado de login ---
+    function isUserLoggedIn() {
+        return localStorage.getItem('userToken') !== null && localStorage.getItem('userId') !== null;
+    }
+
+    // --- Cargar detalles de la obra ---
+    async function loadArtworkDetails() {
+        currentArtworkId = getArtworkIdFromUrl();
+
+        if (!currentArtworkId) {
+            $artworkDetailContent.html('<p class="error">ID de obra de arte no especificado.</p>');
+            return;
+        }
+
+        $artworkDetailContent.html('<p class="loading-message">Cargando detalles de la obra...</p>');
+        $commentsList.html('<p class="loading-message">Cargando comentarios...</p>');
+
         try {
-            const response = await fetch(`/backend/api/artworks.php?id=${artworkId}`);
-            if (!response.ok) throw new Error('Obra no encontrada');
-            
-            const artwork = await response.json();
-            renderArtworkDetail(artwork);
-            
-            // Verificar estado de like/favorito si el usuario está autenticado
-            const token = localStorage.getItem('token');
-            const user = localStorage.getItem('user');
-            
-            if (token && user) {
-                const userId = JSON.parse(user).id;
-                
-                // Verificar like
-                const likeResponse = await fetch(`/backend/api/artworks.php?action=get_like_status&artwork_id=${artworkId}&user_id=${userId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                
-                if (likeResponse.ok) {
-                    const likeData = await likeResponse.json();
-                    if (likeData.is_liked) {
-                        likeButton.classList.add('liked');
-                    }
-                    likeCount.textContent = likeData.like_count || 0;
-                }
-                
-                // Verificar favorito
-                const favoriteResponse = await fetch(`/backend/api/users.php?id=${userId}&action=check_favorite&artwork_id=${artworkId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                
-                if (favoriteResponse.ok) {
-                    const favoriteData = await favoriteResponse.json();
-                    if (favoriteData.is_favorite) {
-                        saveButton.classList.add('saved');
-                    }
-                }
+            // Apunta al único punto de entrada y especifica el recurso
+            const artworkResponse = await fetch(`${BASE_API_ENTRYPOINT}?resource=artworks&id=${currentArtworkId}`);
+            const artworkData = await artworkResponse.json();
+
+            if (artworkResponse.ok) {
+                renderArtworkDetails(artworkData);
+                loadComments(currentArtworkId);
+                checkLikeAndFavoriteStatus(currentArtworkId);
+            } else {
+                $artworkDetailContent.html(`<p class="error-message">${artworkData.message || 'Obra de arte no encontrada.'}</p>`);
             }
         } catch (error) {
-            console.error('Error:', error);
-            artworkDetailContent.innerHTML = `
-                <div class="error-message">
-                    <p>Error al cargar los detalles de la obra.</p>
-                    <a href="index.html" class="btn-primary">Volver a la galería</a>
-                </div>
-            `;
+            console.error('Error al cargar detalles de la obra:', error);
+            $artworkDetailContent.html('<p class="error-message">Error de conexión al cargar la obra.</p>');
         }
     }
-    
-    function renderArtworkDetail(artwork) {
-        artworkDetailContent.innerHTML = `
+
+    // --- Renderizar detalles de la obra ---
+    function renderArtworkDetails(artwork) {
+        $artworkDetailContent.empty();
+        const detailHtml = `
             <div class="artwork-main-info">
-                <div class="artwork-image-container">
-                    <img src="${artwork.image_url}" alt="${artwork.title}" class="artwork-detail-img">
-                </div>
+                <img src="${artwork.image_url}" alt="${artwork.title}" class="artwork-detail-img" onerror="this.onerror=null;this.src='https://placehold.co/800x600/cccccc/333333?text=Imagen+no+disponible';">
                 <div class="artwork-text-info">
-                    <h2 class="artwork-detail-title">${artwork.title}</h2>
-                    <p class="artwork-detail-artist">${artwork.artist_name}</p>
-                    
-                    ${artwork.description ? `<div class="artwork-description">${artwork.description}</div>` : ''}
-                    
-                    <div class="artwork-detail-meta">
-                        ${artwork.style ? `<span><strong>Estilo:</strong> ${artwork.style}</span>` : ''}
-                        ${artwork.creation_year ? `<span><strong>Año:</strong> ${artwork.creation_year}</span>` : ''}
-                    </div>
+                    <h2>${artwork.title}</h2>
+                    <p class="artist-name">Artista: <strong>${artwork.artist_name}</strong></p>
+                    <p class="artwork-style">Estilo: ${artwork.style || 'N/A'}</p>
+                    <p class="creation-year">Año: ${artwork.creation_year || 'N/A'}</p>
+                    <p class="artwork-description">${artwork.description || 'Sin descripción disponible.'}</p>
                 </div>
             </div>
         `;
+        $artworkDetailContent.html(detailHtml);
     }
-    
-    async function loadComments() {
+
+    // --- Cargar comentarios ---
+    async function loadComments(artworkId) {
+        $commentsList.empty();
         try {
-            const response = await fetch(`/backend/api/comments.php?artwork_id=${artworkId}`);
-            if (!response.ok) throw new Error('Error al cargar comentarios');
-            
-            const comments = await response.json();
-            renderComments(comments);
+            // Apunta al único punto de entrada y especifica el recurso
+            const response = await fetch(`${BASE_API_ENTRYPOINT}?resource=comments&artwork_id=${artworkId}`);
+            const commentsData = await response.json();
+
+            if (response.ok && commentsData.length > 0) {
+                $.each(commentsData, function(index, comment) {
+                    const commentHtml = `
+                        <div class="comment-item">
+                            <p class="comment-author"><strong>${comment.username}</strong> <span class="comment-date">(${new Date(comment.created_at).toLocaleString()})</span></p>
+                            <p class="comment-text">${comment.comment_text}</p>
+                        </div>
+                    `;
+                    $(commentHtml).hide().appendTo($commentsList).fadeIn(300);
+                });
+            } else {
+                $commentsList.html('<p class="no-comments">Sé el primero en comentar esta obra.</p>');
+            }
         } catch (error) {
-            console.error('Error:', error);
-            commentsList.innerHTML = '<p class="error-message">Error al cargar los comentarios</p>';
+            console.error('Error al cargar comentarios:', error);
+            $commentsList.html('<p class="error-message">Error de conexión al cargar comentarios.</p>');
         }
     }
-    
-    function renderComments(comments) {
-        if (comments.length === 0) {
-            commentsList.innerHTML = '<p class="no-comments">No hay comentarios aún. ¡Sé el primero en comentar!</p>';
+
+    // --- Enviar nuevo comentario ---
+    $commentForm.on('submit', async function(event) {
+        event.preventDefault();
+
+        if (!isUserLoggedIn()) {
+            showMessage($commentMessage, 'Debes iniciar sesión para comentar.', 'error');
             return;
         }
-        
-        commentsList.innerHTML = comments.map(comment => `
-            <div class="comment-item">
-                <div class="comment-header">
-                    <span class="comment-author">${comment.username}</span>
-                    <span class="comment-date">${new Date(comment.created_at).toLocaleString()}</span>
-                </div>
-                <div class="comment-text">${comment.comment_text}</div>
-            </div>
-        `).join('');
-    }
-    
-    async function handleLike() {
-        const token = localStorage.getItem('token');
-        const user = localStorage.getItem('user');
-        
-        if (!token || !user) {
-            window.location.href = `login.html?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+
+        const commentText = $commentText.val().trim();
+        if (commentText === "") {
+            showMessage($commentMessage, 'El comentario no puede estar vacío.', 'error');
             return;
         }
-        
+
+        const userId = localStorage.getItem('userId');
+        const userToken = localStorage.getItem('userToken');
+
+        const $submitButton = $(this).find('button[type="submit"]');
+        $submitButton.prop('disabled', true).text('Publicando...');
+        $commentMessage.empty();
+
         try {
-            const userId = JSON.parse(user).id;
-            const response = await fetch('/backend/api/artworks.php', {
+            // Apunta al único punto de entrada y especifica el recurso
+            const response = await fetch(`${BASE_API_ENTRYPOINT}?resource=comments`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': 'Bearer ' + userToken
+                },
+                body: JSON.stringify({
+                    artwork_id: currentArtworkId,
+                    user_id: userId,
+                    comment_text: commentText
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showMessage($commentMessage, data.message, 'success');
+                $commentText.val('');
+                loadComments(currentArtworkId);
+            } else {
+                showMessage($commentMessage, data.message || 'Error al publicar comentario.', 'error');
+            }
+        } catch (error) {
+            console.error('Error de red o del servidor al enviar comentario:', error);
+            showMessage($commentMessage, 'Error de conexión. Inténtalo de nuevo más tarde.', 'error');
+        } finally {
+            $submitButton.prop('disabled', false).text('Publicar Comentario');
+        }
+    });
+
+    // --- Manejo de Likes ---
+    $likeButton.on('click', async function() {
+        if (!isUserLoggedIn()) {
+            showMessage($commentMessage, 'Debes iniciar sesión para dar "Me gusta".', 'error');
+            return;
+        }
+
+        const userId = localStorage.getItem('userId');
+        const userToken = localStorage.getItem('userToken');
+
+        $likeButton.prop('disabled', true);
+
+        try {
+            // Apunta al único punto de entrada y especifica el recurso
+            const response = await fetch(`${BASE_API_ENTRYPOINT}?resource=artworks`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + userToken
                 },
                 body: JSON.stringify({
                     action: 'toggle_like',
-                    artwork_id: artworkId,
+                    artwork_id: currentArtworkId,
                     user_id: userId
                 })
             });
-            
-            if (!response.ok) throw new Error('Error al actualizar like');
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                if (result.is_liked) {
-                    likeButton.classList.add('liked');
-                } else {
-                    likeButton.classList.remove('liked');
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showMessage($commentMessage, data.message, 'success');
+                if (data.is_liked !== undefined) {
+                    $likeButton.toggleClass('liked', data.is_liked);
+                    $likeButton.text(data.is_liked ? '❤️ Me gusta (Ya te gusta)' : '♡ Me gusta');
                 }
-                likeCount.textContent = result.like_count;
+                if (data.like_count !== undefined) {
+                    $likeCount.text(data.like_count);
+                } else {
+                    loadArtworkDetails();
+                }
+
+            } else {
+                showMessage($commentMessage, data.message || 'Error al procesar el "Me gusta".', 'error');
             }
         } catch (error) {
-            console.error('Error:', error);
-            showMessage('Error al actualizar like', 'error');
+            console.error('Error de red o del servidor al dar like:', error);
+            showMessage($commentMessage, 'Error de conexión. Inténtalo de nuevo más tarde.', 'error');
+        } finally {
+            $likeButton.prop('disabled', false);
         }
-    }
-    
-    async function handleSave() {
-        const token = localStorage.getItem('token');
-        const user = localStorage.getItem('user');
-        
-        if (!token || !user) {
-            window.location.href = `login.html?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+    });
+
+    // --- Manejo de Guardar en Favoritos ---
+    $saveButton.on('click', async function() {
+        if (!isUserLoggedIn()) {
+            showMessage($commentMessage, 'Debes iniciar sesión para guardar en favoritos.', 'error');
             return;
         }
-        
+
+        const userId = localStorage.getItem('userId');
+        const userToken = localStorage.getItem('userToken');
+
+        $saveButton.prop('disabled', true);
+
         try {
-            const userId = JSON.parse(user).id;
-            const isFavorite = saveButton.classList.contains('saved');
-            
-            const response = await fetch('/backend/api/users.php', {
+            // Apunta al único punto de entrada y especifica el recurso
+            const response = await fetch(`${BASE_API_ENTRYPOINT}?resource=users`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': 'Bearer ' + userToken
                 },
                 body: JSON.stringify({
-                    action: isFavorite ? 'remove_favorite' : 'add_favorite',
+                    action: 'add_favorite',
                     userId: userId,
-                    artworkId: artworkId
+                    artworkId: currentArtworkId
                 })
             });
-            
-            if (!response.ok) throw new Error('Error al actualizar favoritos');
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                if (isFavorite) {
-                    saveButton.classList.remove('saved');
-                } else {
-                    saveButton.classList.add('saved');
-                }
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showMessage($commentMessage, data.message, 'success');
+                $saveButton.text('⭐ Guardado en Favoritos (Ya guardado)');
+                $saveButton.addClass('saved');
+            } else {
+                showMessage($commentMessage, data.message || 'Error al guardar en favoritos.', 'error');
             }
         } catch (error) {
-            console.error('Error:', error);
-            showMessage('Error al actualizar favoritos', 'error');
+            console.error('Error de red o del servidor al guardar en favoritos:', error);
+            showMessage($commentMessage, 'Error de conexión. Inténtalo de nuevo más tarde.', 'error');
+        } finally {
+            $saveButton.prop('disabled', false);
         }
-    }
-    
-    async function handleCommentSubmit(e) {
-        e.preventDefault();
-        
-        const token = localStorage.getItem('token');
-        const user = localStorage.getItem('user');
-        
-        if (!token || !user) {
-            window.location.href = `login.html?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+    });
+
+    // --- Verificar si el usuario ya dio like o guardó esta obra ---
+    async function checkLikeAndFavoriteStatus(artworkId) {
+        if (!isUserLoggedIn()) {
+            $likeButton.text('♡ Me gusta (Inicia sesión)');
+            $saveButton.text('⭐ Guardar (Inicia sesión)');
+            $likeButton.prop('disabled', false);
+            $saveButton.prop('disabled', false);
             return;
         }
-        
-        const comment = commentText.value.trim();
-        
-        if (!comment) {
-            showMessage('Por favor escribe un comentario', 'error');
-            return;
-        }
-        
+
+        const userId = localStorage.getItem('userId');
+        const userToken = localStorage.getItem('userToken');
+
         try {
-            const userId = JSON.parse(user).id;
-            const response = await fetch('/backend/api/comments.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    artwork_id: artworkId,
-                    user_id: userId,
-                    comment_text: comment
-                })
+            // Verificar estado de Like
+            const likeStatusResponse = await fetch(`${BASE_API_ENTRYPOINT}?resource=artworks&action=get_like_status&artwork_id=${artworkId}&user_id=${userId}`, {
+                headers: { 'Authorization': 'Bearer ' + userToken }
             });
-            
-            if (!response.ok) throw new Error('Error al publicar comentario');
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                commentText.value = '';
-                showMessage('Comentario publicado', 'success');
-                loadComments();
+            const likeStatusData = await likeStatusResponse.json();
+
+            if (likeStatusResponse.ok && likeStatusData.is_liked) {
+                $likeButton.text('❤️ Me gusta (Ya te gusta)');
+                $likeButton.addClass('liked');
+            } else {
+                $likeButton.text('♡ Me gusta');
+                $likeButton.removeClass('liked');
             }
+            if (likeStatusData.like_count !== undefined) {
+                $likeCount.text(likeStatusData.like_count);
+            }
+
+
+            // Verificar estado de Favorito
+            const favoriteStatusResponse = await fetch(`${BASE_API_ENTRYPOINT}?resource=users&action=check_favorite&artwork_id=${artworkId}&user_id=${userId}`, {
+                headers: { 'Authorization': 'Bearer ' + userToken }
+            });
+            const favoriteStatusData = await favoriteStatusResponse.json();
+
+            if (favoriteStatusResponse.ok && favoriteStatusData.is_favorite) {
+                $saveButton.text('⭐ Guardado en Favoritos (Ya guardado)');
+                $saveButton.addClass('saved');
+            } else {
+                $saveButton.text('⭐ Guardar en Favoritos');
+                $saveButton.removeClass('saved');
+            }
+
         } catch (error) {
-            console.error('Error:', error);
-            showMessage('Error al publicar comentario', 'error');
+            console.error('Error al verificar estado de like/favorito:', error);
+        } finally {
+            $likeButton.prop('disabled', false);
+            $saveButton.prop('disabled', false);
         }
     }
-    
-    function checkAuthStatus() {
-        const token = localStorage.getItem('token');
-        const user = localStorage.getItem('user');
-        
-        if (token && user) {
-            // Mostrar formulario de comentarios
-            commentForm.style.display = 'block';
-        } else {
-            // Ocultar formulario de comentarios
-            commentForm.style.display = 'none';
-            commentsList.insertAdjacentHTML('afterend', '<p class="auth-message">Inicia sesión para dejar un comentario</p>');
-        }
-    }
-    
-    function showMessage(message, type) {
-        commentMessage.textContent = message;
-        commentMessage.className = `message ${type}`;
-        commentMessage.style.display = 'block';
-        
-        setTimeout(() => {
-            commentMessage.style.display = 'none';
-        }, 3000);
-    }
+
+    // --- Inicializar la carga de detalles de la obra al cargar la página ---
+    loadArtworkDetails();
 });

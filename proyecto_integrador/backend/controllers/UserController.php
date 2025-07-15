@@ -1,103 +1,193 @@
 <?php
-// backend/controllers/UserController.php
-require_once __DIR__ . '/../config/database.php';
+// backend/controllers/UserController.php (Procedural)
 
-class UserController {
-    private $conn;
+/**
+ * Maneja las peticiones GET para usuarios (perfil, favoritos, check favorito).
+ * @param PDO $conn Conexión a la base de datos.
+ * @param array $params Parámetros GET.
+ */
+function handleUserGetRequest(PDO $conn, $params) {
+    if (!isset($params["id"])) {
+        http_response_code(400);
+        echo json_encode(["message" => "ID de usuario no especificado."]);
+        return;
+    }
+    $userId = intval($params["id"]);
 
-    public function __construct() {
-        global $conn;
-        $this->conn = $conn;
+    if (isset($params["action"]) && $params["action"] === "favorites") {
+        $favorites = getUserFavoriteArtworksFunc($conn, $userId);
+        if ($favorites !== false) {
+            http_response_code(200);
+            echo json_encode($favorites);
+        } else {
+            http_response_code(404);
+            echo json_encode(["message" => "No se encontraron favoritos para este usuario."]);
+        }
+    } elseif (isset($params["action"]) && $params["action"] === "check_favorite") {
+        if (empty($params['artwork_id'])) {
+            http_response_code(400);
+            echo json_encode(["message" => "Falta ID de obra para verificar favorito."]);
+            return;
+        }
+        $artworkId = intval($params['artwork_id']);
+        $isFavorite = checkFavoriteStatusFunc($conn, $userId, $artworkId);
+        http_response_code(200);
+        echo json_encode(["is_favorite" => $isFavorite]);
+    } else {
+        $user = getUserByIdFunc($conn, $userId);
+        if ($user) {
+            http_response_code(200);
+            echo json_encode($user);
+        } else {
+            http_response_code(404);
+            echo json_encode(["message" => "Usuario no encontrado."]);
+        }
+    }
+}
+
+/**
+ * Maneja las peticiones POST para usuarios (añadir/quitar favoritos).
+ * @param PDO $conn Conexión a la base de datos.
+ * @param array $data Datos del cuerpo JSON.
+ */
+function handleUserPostRequest(PDO $conn, $data) {
+    if (!isset($data['action']) || !isset($data['userId']) || !isset($data['artworkId'])) {
+        http_response_code(400);
+        echo json_encode(["message" => "Faltan datos para la acción de favoritos."]);
+        return;
     }
 
-    public function getUserProfile($userId) {
-        $stmt = $this->conn->prepare("SELECT id, username, email, profile_image_url, created_at FROM users WHERE id = ?");
-        $stmt->execute([$userId]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    $userId = intval($data['userId']);
+    $artworkId = intval($data['artworkId']);
 
-        if (!$user) {
-            return ['success' => false, 'message' => 'Usuario no encontrado'];
+    if ($data['action'] === "add_favorite") {
+        $result = addFavoriteArtworkFunc($conn, $userId, $artworkId);
+        if ($result['success']) {
+            http_response_code(200);
+            echo json_encode(["message" => $result['message']]);
+        } else {
+            http_response_code(409); // Conflict
+            echo json_encode(["message" => $result['message']]);
         }
-
-        // Obtener obras favoritas
-        $stmt = $this->conn->prepare("
-            SELECT a.* 
-            FROM artworks a
-            JOIN favorites f ON a.id = f.artwork_id
-            WHERE f.user_id = ?
-        ");
-        $stmt->execute([$userId]);
-        $favorites = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Obtener conteo de likes para cada obra favorita
-        foreach ($favorites as &$favorite) {
-            $stmt = $this->conn->prepare("SELECT COUNT(*) FROM likes WHERE artwork_id = ?");
-            $stmt->execute([$favorite['id']]);
-            $favorite['likes_count'] = $stmt->fetchColumn();
+    } elseif ($data['action'] === "remove_favorite") {
+        $result = removeFavoriteArtworkFunc($conn, $userId, $artworkId);
+        if ($result['success']) {
+            http_response_code(200);
+            echo json_encode(["message" => $result['message']]);
+        } else {
+            http_response_code(404); // Not Found o Conflict
+            echo json_encode(["message" => $result['message']]);
         }
+    } else {
+        http_response_code(400);
+        echo json_encode(["message" => "Acción de favoritos no válida."]);
+    }
+}
 
-        // Obtener obras subidas por el usuario
-        $stmt = $this->conn->prepare("SELECT * FROM artworks WHERE owner_id = ?");
-        $stmt->execute([$userId]);
-        $artworks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+/**
+ * Obtiene la información de un usuario por su ID.
+ * @param PDO $conn Conexión a la base de datos.
+ * @param int $userId ID del usuario.
+ * @return array|false Datos del usuario o false si no se encuentra.
+ */
+function getUserByIdFunc(PDO $conn, $userId) {
+    $users_table = "users";
+    $query = "SELECT id, username, email, profile_image_url, created_at FROM " . $users_table . " WHERE id = :id LIMIT 0,1";
+    $stmt = $conn->prepare($query);
+    $stmt->bindParam(':id', $userId, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
 
-        return [
-            'success' => true,
-            'user' => $user,
-            'favorites' => $favorites,
-            'artworks' => $artworks
-        ];
+/**
+ * Obtiene las obras de arte favoritas de un usuario.
+ * @param PDO $conn Conexión a la base de datos.
+ * @param int $userId ID del usuario.
+ * @return array Un array de obras de arte favoritas.
+ */
+function getUserFavoriteArtworksFunc(PDO $conn, $userId) {
+    $favorites_table = "favorites";
+    $artworks_table = "artworks";
+
+    $query = "SELECT a.id, a.title, a.artist_name, a.image_url, a.style
+              FROM " . $favorites_table . " f
+              JOIN " . $artworks_table . " a ON f.artwork_id = a.id
+              WHERE f.user_id = :user_id
+              ORDER BY f.created_at DESC";
+    $stmt = $conn->prepare($query);
+    $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Añade una obra de arte a los favoritos de un usuario.
+ * @param PDO $conn Conexión a la base de datos.
+ * @param int $userId ID del usuario.
+ * @param int $artworkId ID de la obra de arte.
+ * @return array Resultado de la operación.
+ */
+function addFavoriteArtworkFunc(PDO $conn, $userId, $artworkId) {
+    $favorites_table = "favorites";
+
+    $checkQuery = "SELECT COUNT(*) FROM " . $favorites_table . " WHERE user_id = :user_id AND artwork_id = :artwork_id";
+    $checkStmt = $conn->prepare($checkQuery);
+    $checkStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+    $checkStmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
+    $checkStmt->execute();
+
+    if ($checkStmt->fetchColumn() > 0) {
+        return ["success" => false, "message" => "Esta obra ya está en tus favoritos."];
     }
 
-    public function updateProfile($userId, $data) {
-        $updates = [];
-        $params = [];
+    $query = "INSERT INTO " . $favorites_table . " (user_id, artwork_id) VALUES (:user_id, :artwork_id)";
+    $stmt = $conn->prepare($query);
+    $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+    $stmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
 
-        if (!empty($data['username'])) {
-            // Verificar si el nuevo username ya existe
-            $stmt = $this->conn->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
-            $stmt->execute([$data['username'], $userId]);
-            
-            if ($stmt->rowCount() > 0) {
-                return ['success' => false, 'message' => 'El nombre de usuario ya está en uso'];
-            }
-            
-            $updates[] = "username = ?";
-            $params[] = $data['username'];
-        }
-
-        if (!empty($data['email'])) {
-            // Verificar si el nuevo email ya existe
-            $stmt = $this->conn->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
-            $stmt->execute([$data['email'], $userId]);
-            
-            if ($stmt->rowCount() > 0) {
-                return ['success' => false, 'message' => 'El email ya está en uso'];
-            }
-            
-            $updates[] = "email = ?";
-            $params[] = $data['email'];
-        }
-
-        if (!empty($data['profile_image_url'])) {
-            $updates[] = "profile_image_url = ?";
-            $params[] = $data['profile_image_url'];
-        }
-
-        if (!empty($data['password'])) {
-            $updates[] = "password_hash = ?";
-            $params[] = password_hash($data['password'], PASSWORD_BCRYPT);
-        }
-
-        if (empty($updates)) {
-            return ['success' => false, 'message' => 'No hay datos para actualizar'];
-        }
-
-        $params[] = $userId;
-        $sql = "UPDATE users SET " . implode(', ', $updates) . " WHERE id = ?";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($params);
-
-        return ['success' => true, 'message' => 'Perfil actualizado correctamente'];
+    if ($stmt->execute()) {
+        return ["success" => true, "message" => "Obra añadida a favoritos."];
     }
+    return ["success" => false, "message" => "Error al añadir a favoritos."];
+}
+
+/**
+ * Elimina una obra de arte de los favoritos de un usuario.
+ * @param PDO $conn Conexión a la base de datos.
+ * @param int $userId ID del usuario.
+ * @param int $artworkId ID de la obra de arte.
+ * @return array Resultado de la operación.
+ */
+function removeFavoriteArtworkFunc(PDO $conn, $userId, $artworkId) {
+    $favorites_table = "favorites";
+    $query = "DELETE FROM " . $favorites_table . " WHERE user_id = :user_id AND artwork_id = :artwork_id";
+    $stmt = $conn->prepare($query);
+    $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+    $stmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
+
+    if ($stmt->execute()) {
+        if ($stmt->rowCount() > 0) {
+            return ["success" => true, "message" => "Obra eliminada de favoritos."];
+        } else {
+            return ["success" => false, "message" => "La obra no estaba en tus favoritos o no se pudo encontrar."];
+        }
+    }
+    return ["success" => false, "message" => "Error al eliminar de favoritos."];
+}
+
+/**
+ * Verifica si una obra de arte es favorita para un usuario.
+ * @param PDO $conn Conexión a la base de datos.
+ * @param int $userId ID del usuario.
+ * @param int $artworkId ID de la obra de arte.
+ * @return bool True si es favorita, false en caso contrario.
+ */
+function checkFavoriteStatusFunc(PDO $conn, $userId, $artworkId) {
+    $favorites_table = "favorites";
+    $query = "SELECT COUNT(*) FROM " . $favorites_table . " WHERE user_id = :user_id AND artwork_id = :artwork_id";
+    $stmt = $conn->prepare($query);
+    $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+    $stmt->bindParam(':artwork_id', $artworkId, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchColumn() > 0;
 }
