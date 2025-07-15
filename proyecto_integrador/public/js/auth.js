@@ -1,5 +1,6 @@
+// public/js/auth.js
 document.addEventListener('DOMContentLoaded', function() {
-    // Elementos comunes
+    // Elementos del DOM
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
     const showLogin = document.getElementById('showLogin');
@@ -7,195 +8,168 @@ document.addEventListener('DOMContentLoaded', function() {
     const loginMessage = document.getElementById('loginMessage');
     const registerMessage = document.getElementById('registerMessage');
     
-    // Elementos específicos de login
-    const loginUsername = document.getElementById('loginUsername');
-    const loginPassword = document.getElementById('loginPassword');
+    // Mostrar formulario de login
+    showLogin.addEventListener('click', function(e) {
+        e.preventDefault();
+        loginForm.classList.add('active');
+        registerForm.classList.remove('active');
+        showLogin.classList.add('active');
+        showRegister.classList.remove('active');
+        loginMessage.textContent = '';
+        registerMessage.textContent = '';
+    });
     
-    // Elementos específicos de registro
-    const registerUsername = document.getElementById('registerUsername');
-    const registerEmail = document.getElementById('registerEmail');
-    const registerPassword = document.getElementById('registerPassword');
-    const registerConfirmPassword = document.getElementById('registerConfirmPassword');
-    
-    // Toggle entre formularios
-    if (showLogin && showRegister) {
-        showLogin.addEventListener('click', function(e) {
-            e.preventDefault();
-            loginForm.classList.add('active');
-            registerForm.classList.remove('active');
-            showLogin.classList.add('active');
-            showRegister.classList.remove('active');
-        });
-        
-        showRegister.addEventListener('click', function(e) {
-            e.preventDefault();
-            registerForm.classList.add('active');
-            loginForm.classList.remove('active');
-            showRegister.classList.add('active');
-            showLogin.classList.remove('active');
-        });
-    }
+    // Mostrar formulario de registro
+    showRegister.addEventListener('click', function(e) {
+        e.preventDefault();
+        registerForm.classList.add('active');
+        loginForm.classList.remove('active');
+        showRegister.classList.add('active');
+        showLogin.classList.remove('active');
+        loginMessage.textContent = '';
+        registerMessage.textContent = '';
+    });
     
     // Manejar login
-    if (loginForm) {
-        loginForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
+    loginForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const username = document.getElementById('loginUsername').value;
+        const password = document.getElementById('loginPassword').value;
+        
+        // Validación básica
+        if (!username || !password) {
+            showError(loginMessage, 'Todos los campos son obligatorios');
+            return;
+        }
+        
+        try {
+            const response = await fetch('/backend/api/auth.php?action=login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            });
             
-            const username = loginUsername.value.trim();
-            const password = loginPassword.value.trim();
+            const data = await response.json();
             
-            if (!username || !password) {
-                showMessage(loginMessage, 'Por favor completa todos los campos', 'error');
+            if (!data.success) {
+                showError(loginMessage, data.message);
                 return;
             }
             
-            try {
-                const response = await fetch('/backend/api/auth.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        action: 'login',
-                        username: username,
-                        password: password
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Guardar token y datos de usuario
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    
-                    showMessage(loginMessage, data.message, 'success');
-                    
-                    // Redirigir después de 1 segundo
-                    setTimeout(() => {
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const redirect = urlParams.get('redirect') || 'index.html';
-                        window.location.href = redirect;
-                    }, 1000);
-                } else {
-                    showMessage(loginMessage, data.message, 'error');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showMessage(loginMessage, 'Error de conexión con el servidor', 'error');
-            }
-        });
-    }
+            // Login exitoso - redirigir o actualizar UI
+            showSuccess(loginMessage, 'Inicio de sesión exitoso');
+            
+            // Redirigir después de 1 segundo
+            setTimeout(() => {
+                const redirectUrl = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
+                window.location.href = redirectUrl;
+            }, 1000);
+            
+        } catch (error) {
+            console.error('Error:', error);
+            showError(loginMessage, 'Error al conectar con el servidor');
+        }
+    });
     
     // Manejar registro
-    if (registerForm) {
-        registerForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const username = registerUsername.value.trim();
-            const email = registerEmail.value.trim();
-            const password = registerPassword.value.trim();
-            const confirmPassword = registerConfirmPassword.value.trim();
-            
-            // Validaciones
-            if (!username || !email || !password || !confirmPassword) {
-                showMessage(registerMessage, 'Por favor completa todos los campos', 'error');
-                return;
-            }
-            
-            if (password !== confirmPassword) {
-                showMessage(registerMessage, 'Las contraseñas no coinciden', 'error');
-                return;
-            }
-            
-            if (password.length < 6) {
-                showMessage(registerMessage, 'La contraseña debe tener al menos 6 caracteres', 'error');
-                return;
-            }
-            
-            try {
-                const response = await fetch('/backend/api/auth.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        action: 'register',
-                        username: username,
-                        email: email,
-                        password: password
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    showMessage(registerMessage, data.message, 'success');
-                    
-                    // Limpiar formulario
-                    registerForm.reset();
-                    
-                    // Cambiar a pestaña de login después de 2 segundos
-                    setTimeout(() => {
-                        if (showLogin && showRegister) {
-                            showLogin.click();
-                        }
-                    }, 2000);
-                } else {
-                    showMessage(registerMessage, data.message, 'error');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showMessage(registerMessage, 'Error de conexión con el servidor', 'error');
-            }
-        });
-    }
-    
-    // Verificar si hay un token válido al cargar la página
-    checkAuthStatus();
-    
-    // Cerrar sesión
-    const logoutButton = document.getElementById('logoutButton');
-    if (logoutButton) {
-        logoutButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = 'index.html';
-        });
-    }
-    
-    // Función para mostrar mensajes
-    function showMessage(element, message, type) {
-        if (!element) return;
+    registerForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
         
-        element.textContent = message;
-        element.className = `message ${type}`;
-        element.style.display = 'block';
+        const username = document.getElementById('registerUsername').value;
+        const email = document.getElementById('registerEmail').value;
+        const password = document.getElementById('registerPassword').value;
+        const confirmPassword = document.getElementById('registerConfirmPassword').value;
         
-        setTimeout(() => {
-            element.style.display = 'none';
-        }, 3000);
-    }
-    
-    // Verificar estado de autenticación
-    function checkAuthStatus() {
-        const token = localStorage.getItem('token');
-        const user = localStorage.getItem('user');
-        const loginLink = document.getElementById('login-link');
-        const profileLink = document.getElementById('profile-link');
-        const uploadLink = document.getElementById('upload-link');
-        
-        if (token && user) {
-            // Usuario autenticado
-            if (loginLink) loginLink.style.display = 'none';
-            if (profileLink) profileLink.style.display = 'block';
-            if (uploadLink) uploadLink.style.display = 'block';
-        } else {
-            // Usuario no autenticado
-            if (loginLink) loginLink.style.display = 'block';
-            if (profileLink) profileLink.style.display = 'none';
-            if (uploadLink) uploadLink.style.display = 'none';
+        // Validaciones
+        if (!username || !email || !password || !confirmPassword) {
+            showError(registerMessage, 'Todos los campos son obligatorios');
+            return;
         }
+        
+        if (password !== confirmPassword) {
+            showError(registerMessage, 'Las contraseñas no coinciden');
+            return;
+        }
+        
+        if (password.length < 6) {
+            showError(registerMessage, 'La contraseña debe tener al menos 6 caracteres');
+            return;
+        }
+        
+        if (!validateEmail(email)) {
+            showError(registerMessage, 'Ingresa un email válido');
+            return;
+        }
+        
+        try {
+            const response = await fetch('/backend/api/auth.php?action=register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username,
+                    email: email,
+                    password: password
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                showError(registerMessage, data.message);
+                return;
+            }
+            
+            // Registro exitoso - mostrar mensaje y cambiar a login
+            showSuccess(registerMessage, 'Registro exitoso. Por favor inicia sesión.');
+            
+            // Cambiar al formulario de login después de 2 segundos
+            setTimeout(() => {
+                loginForm.classList.add('active');
+                registerForm.classList.remove('active');
+                showLogin.classList.add('active');
+                showRegister.classList.remove('active');
+                registerMessage.textContent = '';
+                
+                // Rellenar los campos de login
+                document.getElementById('loginUsername').value = username;
+                document.getElementById('loginPassword').value = password;
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Error:', error);
+            showError(registerMessage, 'Error al conectar con el servidor');
+        }
+    });
+    
+    // Funciones auxiliares
+    function showError(element, message) {
+        element.textContent = message;
+        element.className = 'message-area error';
+    }
+    
+    function showSuccess(element, message) {
+        element.textContent = message;
+        element.className = 'message-area success';
+    }
+    
+    function validateEmail(email) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    }
+    
+    // Verificar si hay parámetros de redirección para mostrar login/register
+    const urlParams = new URLSearchParams(window.location.search);
+    const show = urlParams.get('show');
+    
+    if (show === 'register') {
+        showRegister.click();
     }
 });

@@ -1,214 +1,161 @@
+// public/js/upload.js
 document.addEventListener('DOMContentLoaded', function() {
+    // Elementos del DOM
     const uploadForm = document.getElementById('uploadForm');
     const artworkImage = document.getElementById('artworkImage');
     const uploadMessage = document.getElementById('uploadMessage');
+    const imagePreview = document.createElement('div');
+    imagePreview.className = 'image-preview';
+    uploadForm.insertBefore(imagePreview, artworkImage.parentNode.nextSibling);
     
-    // Verificar autenticación
-    const token = localStorage.getItem('token');
-    if (!token) {
-        window.location.href = 'login.html?redirect=upload.html';
-        return;
-    }
+    // Verificar autenticación al cargar la página
+    checkAuth();
     
-    // Configurar área de subida de archivos
-    setupFileUpload();
-    
-    // Event listener para el formulario
-    uploadForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
+    // Mostrar vista previa de la imagen
+    artworkImage.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
         
-        // Validar formulario
-        if (!validateForm()) {
+        if (!file.type.match('image.*')) {
+            showError(uploadMessage, 'El archivo debe ser una imagen');
             return;
         }
         
-        const formData = new FormData(this);
-        const submitButton = this.querySelector('button[type="submit"]');
+        if (file.size > 5 * 1024 * 1024) { // 5MB
+            showError(uploadMessage, 'La imagen no debe exceder los 5MB');
+            return;
+        }
         
-        // Deshabilitar botón durante el envío
-        submitButton.disabled = true;
-        submitButton.textContent = 'Subiendo...';
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            imagePreview.innerHTML = `
+                <img src="${e.target.result}" alt="Vista previa">
+                <button type="button" class="remove-image">×</button>
+            `;
+            
+            // Botón para eliminar la imagen seleccionada
+            imagePreview.querySelector('.remove-image').addEventListener('click', function() {
+                artworkImage.value = '';
+                imagePreview.innerHTML = '';
+                imagePreview.style.display = 'none';
+            });
+            
+            imagePreview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    });
+    
+    // Manejar envío del formulario
+    uploadForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Validar campos obligatorios
+        const title = document.getElementById('artworkTitle').value;
+        const artist = document.getElementById('artworkArtist').value;
+        const description = document.getElementById('artworkDescription').value;
+        const imageFile = artworkImage.files[0];
+        
+        if (!title || !artist || !imageFile) {
+            showError(uploadMessage, 'Título, artista e imagen son obligatorios');
+            return;
+        }
+        
+        // Validar tipo de archivo
+        if (!imageFile.type.match('image.*')) {
+            showError(uploadMessage, 'El archivo debe ser una imagen (JPG, PNG, GIF)');
+            return;
+        }
+        
+        // Validar tamaño de archivo
+        if (imageFile.size > 5 * 1024 * 1024) { // 5MB
+            showError(uploadMessage, 'La imagen no debe exceder los 5MB');
+            return;
+        }
         
         try {
+            // Crear FormData para enviar el archivo
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('artist_name', artist);
+            formData.append('description', description);
+            formData.append('creation_year', document.getElementById('artworkYear').value);
+            formData.append('style', document.getElementById('artworkStyle').value);
+            formData.append('artwork_image', imageFile);
+            
+            // Mostrar spinner de carga
+            const submitButton = uploadForm.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.innerHTML;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo...';
+            submitButton.disabled = true;
+            
+            // Enviar datos al servidor
             const response = await fetch('/backend/api/artworks.php', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
                 body: formData
             });
             
             const data = await response.json();
             
-            if (data.success) {
-                showMessage(data.message, 'success');
-                uploadForm.reset();
-                resetFileInput();
-                
-                // Redirigir después de 2 segundos
-                setTimeout(() => {
-                    window.location.href = `artwork.html?id=${data.artwork_id}`;
-                }, 2000);
-            } else {
-                showMessage(data.message, 'error');
+            if (!data.success) {
+                throw new Error(data.message || 'Error al subir la obra');
             }
+            
+            // Éxito - mostrar mensaje y redirigir
+            showSuccess(uploadMessage, 'Obra subida exitosamente');
+            
+            // Redirigir a la página de la obra después de 2 segundos
+            setTimeout(() => {
+                window.location.href = `artwork.html?id=${data.artwork_id}`;
+            }, 2000);
+            
         } catch (error) {
             console.error('Error:', error);
-            showMessage('Error al subir la obra', 'error');
+            showError(uploadMessage, error.message || 'Error al subir la obra');
         } finally {
-            submitButton.disabled = false;
-            submitButton.textContent = 'Subir Obra';
+            // Restaurar botón
+            if (submitButton) {
+                submitButton.innerHTML = originalButtonText;
+                submitButton.disabled = false;
+            }
         }
     });
     
-    // Funciones auxiliares
-    function setupFileUpload() {
-        const fileInputContainer = artworkImage.parentNode;
-        
-        // Crear elementos para la interfaz de arrastrar y soltar
-        const dropArea = document.createElement('div');
-        dropArea.className = 'drop-area';
-        dropArea.innerHTML = `
-            <div class="drop-content">
-                <i class="fas fa-cloud-upload-alt"></i>
-                <p>Arrastra tu imagen aquí o haz clic para seleccionar</p>
-                <small>Formatos aceptados: JPG, PNG, GIF. Tamaño máximo: 5MB</small>
-            </div>
-        `;
-        
-        const previewContainer = document.createElement('div');
-        previewContainer.className = 'preview-container';
-        
-        fileInputContainer.appendChild(dropArea);
-        fileInputContainer.appendChild(previewContainer);
-        
-        // Ocultar el input de archivo original
-        artworkImage.style.display = 'none';
-        
-        // Event listeners para el área de drop
-        dropArea.addEventListener('click', () => artworkImage.click());
-        
-        dropArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropArea.classList.add('dragover');
-        });
-        
-        dropArea.addEventListener('dragleave', () => {
-            dropArea.classList.remove('dragover');
-        });
-        
-        dropArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropArea.classList.remove('dragover');
+    // Función para verificar autenticación
+    async function checkAuth() {
+        try {
+            const response = await fetch('/backend/api/users.php');
             
-            if (e.dataTransfer.files.length) {
-                artworkImage.files = e.dataTransfer.files;
-                handleFileSelect(e.dataTransfer.files[0]);
+            if (!response.ok) {
+                if (response.status === 401) {
+                    // No autenticado - redirigir a login
+                    window.location.href = 'login.html?redirect=upload.html';
+                    return false;
+                }
+                throw new Error('Error al verificar autenticación');
             }
-        });
-        
-        artworkImage.addEventListener('change', () => {
-            if (artworkImage.files.length) {
-                handleFileSelect(artworkImage.files[0]);
-            }
-        });
-    }
-    
-    function handleFileSelect(file) {
-        // Validar el archivo
-        const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
-        const maxSize = 5 * 1024 * 1024; // 5MB
-        
-        if (!validTypes.includes(file.type)) {
-            showMessage('Solo se permiten archivos JPG, PNG o GIF', 'error');
-            resetFileInput();
-            return;
-        }
-        
-        if (file.size > maxSize) {
-            showMessage('El tamaño máximo permitido es 5MB', 'error');
-            resetFileInput();
-            return;
-        }
-        
-        // Mostrar vista previa
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const previewContainer = document.querySelector('.preview-container');
-            previewContainer.innerHTML = `
-                <div class="preview-image">
-                    <img src="${e.target.result}" alt="Vista previa">
-                    <button class="remove-image-btn" title="Eliminar imagen">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            `;
             
-            // Event listener para el botón de eliminar
-            document.querySelector('.remove-image-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                resetFileInput();
-            });
-        };
-        reader.readAsDataURL(file);
-    }
-    
-    function resetFileInput() {
-        artworkImage.value = '';
-        document.querySelector('.preview-container').innerHTML = '';
-        document.querySelector('.drop-area').style.display = 'flex';
-    }
-    
-    function validateForm() {
-        let isValid = true;
-        const title = document.getElementById('artworkTitle').value.trim();
-        const artist = document.getElementById('artworkArtist').value.trim();
-        const image = artworkImage.files[0];
-        
-        // Limpiar errores anteriores
-        document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
-        document.querySelectorAll('.error-message').forEach(el => el.remove());
-        
-        // Validar título
-        if (!title) {
-            markError('artworkTitle', 'El título es obligatorio');
-            isValid = false;
+            return true;
+            
+        } catch (error) {
+            console.error('Error:', error);
+            window.location.href = 'login.html?redirect=upload.html';
+            return false;
         }
-        
-        // Validar artista
-        if (!artist) {
-            markError('artworkArtist', 'El nombre del artista es obligatorio');
-            isValid = false;
-        }
-        
-        // Validar imagen
-        if (!image) {
-            showMessage('Debes seleccionar una imagen', 'error');
-            isValid = false;
-        }
-        
-        return isValid;
     }
     
-    function markError(fieldId, message) {
-        const field = document.getElementById(fieldId);
-        const formGroup = field.closest('.form-group');
-        
-        formGroup.classList.add('error');
-        
-        const errorMessage = document.createElement('div');
-        errorMessage.className = 'error-message';
-        errorMessage.textContent = message;
-        formGroup.appendChild(errorMessage);
-    }
-    
-    function showMessage(message, type) {
-        uploadMessage.textContent = message;
-        uploadMessage.className = `message ${type}`;
-        uploadMessage.style.display = 'block';
+    function showError(element, message) {
+        element.textContent = message;
+        element.className = 'message-area error';
+        element.style.display = 'block';
         
         setTimeout(() => {
-            uploadMessage.style.display = 'none';
-        }, 3000);
+            element.style.display = 'none';
+        }, 5000);
+    }
+    
+    function showSuccess(element, message) {
+        element.textContent = message;
+        element.className = 'message-area success';
+        element.style.display = 'block';
     }
 });
