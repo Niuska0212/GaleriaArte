@@ -156,7 +156,7 @@ body {
     border-color: #007bff;
 }
 
-/* --- Sección de la Galería y Grids --- */
+/* --- Sección de la Galería --- */
 .gallery-section {
     margin-top: 40px;
 }
@@ -169,53 +169,34 @@ body {
     font-weight: 600;
 }
 
-/* Grid General para la Galería Principal (ahora más pequeño, como Pinterest) */
+
 .artwork-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* Usar auto-fit para columnas flexibles */
-    grid-auto-rows: minmax(100px, auto); /* Permite que las filas se ajusten al contenido */
-    gap: 15px; /* Espacio más pequeño para un look más denso */
-    align-items: start; /* Alinea los elementos al inicio de su celda */
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
 }
-
-/* Las clases .pinterest-grid y .artwork-grid ahora comparten las mismas propiedades de grid para uniformidad */
-.pinterest-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* Usar auto-fit para columnas flexibles */
-    grid-auto-rows: minmax(100px, auto);
-    gap: 15px;
-    align-items: start;
-}
-
 .artwork-card {
-    background-color: #ffffff;
-    border-radius: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    height: auto; /* Importante para el efecto Pinterest */
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
-
-.artwork-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-}
-
 .artwork-card img {
     width: 100%;
-    height: 200px; /* Tamaño estándar fijo para todas las imágenes */
-    object-fit: cover; /* Asegura que la imagen cubra el área, recortando si es necesario */
-    display: block;
-    border-bottom: 1px solid #eee;
+    height: 200px;
+    object-fit: cover;
 }
+.artwork-info {
+    padding: 10px;
+    text-align: center;
+}
+
+
 
 .artwork-info {
     padding: 15px;
     text-align: center;
-    flex-grow: 1;
+    flex-grow: 1; /* Permite que la información ocupe el espacio restante */
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -301,9 +282,6 @@ body {
         width: 100%;
     }
 
-    .artwork-grid, .pinterest-grid { /* Aplicar a ambos grids en móvil */
-        grid-template-columns: 1fr; /* Una columna en móviles */
-    }
 }
 
 /* Estilos para jQuery UI (si se usan componentes específicos como Datepicker, Autocomplete, etc.) */
@@ -324,20 +302,20 @@ body {
 }
 
 /* --- Estilos específicos para Login y Perfil --- */
-.auth-container, .profile-container, .upload-container {
+.auth-container, .profile-container {
     display: flex;
     justify-content: center;
-    align-items: flex-start;
-    padding-top: 40px;
+    align-items: flex-start; /* Alinea arriba para evitar que se centre verticalmente demasiado */
+    padding-top: 40px; /* Espacio desde el header */
 }
 
-.auth-section, .profile-section, .upload-section {
+.auth-section, .profile-section {
     background-color: #ffffff;
     border-radius: 10px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     padding: 40px;
     width: 100%;
-    max-width: 500px;
+    max-width: 500px; /* Ancho máximo para los formularios */
     text-align: center;
 }
 
@@ -375,7 +353,7 @@ body {
     background-color: #e0e0e0;
 }
 
-.auth-form, .upload-form {
+.auth-form {
     display: flex;
     flex-direction: column;
     gap: 15px;
@@ -399,10 +377,7 @@ body {
 
 .form-group input[type="text"],
 .form-group input[type="email"],
-.form-group input[type="password"],
-.form-group input[type="number"],
-.form-group input[type="file"],
-.form-group textarea {
+.form-group input[type="password"] {
     width: 100%;
     padding: 12px;
     border: 1px solid #ddd;
@@ -413,20 +388,10 @@ body {
 
 .form-group input[type="text"]:focus,
 .form-group input[type="email"]:focus,
-.form-group input[type="password"]:focus,
-.form-group input[type="number"]:focus,
-.form-group input[type="file"]:focus,
-.form-group textarea:focus {
+.form-group input[type="password"]:focus {
     outline: none;
     border-color: #007bff;
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
-}
-
-.form-group small {
-    display: block;
-    margin-top: 5px;
-    font-size: 0.85em;
-    color: #777;
 }
 
 .submit-button {
@@ -509,79 +474,148 @@ body {
 }
 
 /* Ajustes para el grid de obras de arte en el perfil */
-/* Eliminamos los ajustes específicos para .profile-container .artwork-grid
-   y dejamos que .pinterest-grid se encargue de ello */
-
-
-/* --- Estilos específicos para Detalle de Obra (artwork.html) --- */
-.artwork-detail-container {
-    padding-top: 40px;
+.profile-container {
+    margin-top: 20px;
+    /* Asegura que el grid se adapte bien dentro del contenedor del perfil */
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); /* Columnas más pequeñas para el perfil */
+    gap: 20px;
 }
 
+.profile-container  {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.profile-container  {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.12);
+}
+
+
+   
+
+.artwork-info {
+    padding: 12px 15px;
+    text-align: center;
+}
+
+.artwork-info h3 {
+    font-size: 1.2em;
+    color: #333333;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.artwork-info p {
+    font-size: 0.9em;
+    color: #666;
+}
+
+
 .artwork-detail-section {
-    background-color: #ffffff;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     padding: 40px;
     width: 100%;
-    max-width: 900px; /* Ancho máximo para el detalle de la obra */
+    max-width: 900px;
     margin: 0 auto;
-    text-align: center; /* Centrar contenido como el título */
+    text-align: center;
 }
 
 .artwork-main-info {
     display: flex;
-    flex-direction: column; /* Por defecto en columna para móviles */
+    flex-direction: column;
     gap: 30px;
     align-items: center;
     margin-bottom: 30px;
 }
 
 .artwork-detail-img {
-    max-width: 100%; /* Permitir que ocupe el ancho disponible */
-    height: auto; /* Altura automática para mantener proporción */
-    max-height: 500px; /* Altura máxima para la imagen grande */
-    object-fit: contain; /* Asegura que la imagen completa sea visible */
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    max-width: 100%;
+    height: auto;
+    max-height: 600px;
+    object-fit: contain;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    transition: transform 0.4s ease, opacity 0.4s ease;
+    animation: zoomIn 0.4s ease forwards;
+    opacity: 0;
+}
+
+@keyframes zoomIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 .artwork-text-info {
     text-align: left;
-    flex-grow: 1; /* Permite que ocupe el espacio restante */
+    width: 100%;
 }
 
 .artwork-text-info h2 {
-    font-size: 2.5em;
+    font-size: 2.2em;
     color: #333;
-    margin-bottom: 15px;
     font-weight: 700;
+    margin-bottom: 15px;
 }
 
 .artwork-text-info p {
     font-size: 1.1em;
     color: #555;
+    line-height: 1.6;
     margin-bottom: 10px;
-}
-
-.artwork-text-info p strong {
-    color: #333;
 }
 
 .artwork-description {
     margin-top: 20px;
     font-size: 1.05em;
-    line-height: 1.8;
     color: #444;
 }
 
 .artwork-actions-detail {
-    display: flex;
-    justify-content: center;
-    gap: 25px;
     margin-top: 30px;
-    margin-bottom: 40px;
+    display: flex;
+    gap: 20px;
+    justify-content: center;
 }
+
+.like-button-detail,
+.save-button-detail {
+    padding: 12px 25px;
+    font-size: 1em;
+    font-weight: 600;
+    border-radius: 8px;
+    border: 2px solid #007bff;
+    background-color: #fff;
+    color: #007bff;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.like-button-detail:hover,
+.save-button-detail:hover {
+    background-color: #007bff;
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.like-button-detail.liked {
+    background-color: #e74c3c;
+    border-color: #e74c3c;
+    color: #fff;
+}
+
+.save-button-detail.saved {
+    background-color: #f39c12;
+    border-color: #f39c12;
+    color: #fff;
+}
+
 
 .like-button-detail, .save-button-detail {
     padding: 12px 25px;
@@ -706,118 +740,22 @@ body {
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
 }
 
-/* Responsive para el detalle de obra */
-@media (min-width: 769px) {
+
+
+@media (min-width: 768px) {
     .artwork-main-info {
-        flex-direction: row; /* En fila para pantallas grandes */
-        text-align: left;
+        flex-direction: row;
+        align-items: flex-start;
     }
 
     .artwork-detail-img {
-        flex-shrink: 0; /* Evita que la imagen se encoja */
-        width: 40%; /* Ancho de la imagen en escritorio */
-        max-width: 400px; /* Ancho máximo para la imagen grande */
-        height: auto; /* Altura automática */
-        margin-right: 30px;
+        width: 50%;
+        max-width: 450px;
     }
 
     .artwork-text-info {
-        width: 60%; /* Ancho del texto en escritorio */
+        width: 50%;
+        padding-left: 30px;
     }
 }
 
-/* MODAL STYLES */
-.modal {
-    display: none; /* Hidden by default */
-    position: fixed; /* Stay in place */
-    z-index: 1001; /* Sit on top */
-    left: 0;
-    top: 0;
-    width: 100%; /* Full width */
-    height: 100%; /* Full height */
-    overflow: auto; /* Enable scroll if needed */
-    background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
-    justify-content: center;
-    align-items: center;
-    padding-top: 50px; /* Offset from top */
-}
-
-.modal-content {
-    background-color: #fefefe;
-    margin: auto;
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    max-width: 600px;
-    width: 90%;
-    position: relative;
-    animation: fadeIn 0.3s;
-}
-
-.modal-content h2 {
-    text-align: center;
-    margin-bottom: 25px;
-    color: #333;
-    font-size: 1.8em;
-}
-
-.close-button {
-    color: #aaa;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-    position: absolute;
-    top: 10px;
-    right: 20px;
-    cursor: pointer;
-    transition: color 0.3s;
-}
-
-.close-button:hover,
-.close-button:focus {
-    color: #333;
-    text-decoration: none;
-}
-
-.modal .form-group {
-    margin-bottom: 15px;
-}
-
-.modal .submit-button {
-    margin-top: 20px;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Global Message Modal (for alerts) */
-#globalMessageModal {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 15px 30px;
-    border-radius: 8px;
-    z-index: 1000;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    display: none;
-    font-weight: bold;
-    text-align: center;
-}
-#globalMessageModal.success {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-}
-#globalMessageModal.error {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-}
-#globalMessageModal.info {
-    background-color: #e2e3e5;
-    color: #383d41;
-    border: 1px solid #d6d8db;
-}
