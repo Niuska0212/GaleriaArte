@@ -1,5 +1,5 @@
 <?php
-// backend/api/auth.php
+// proyecto_integrador/backend/api/auth.php
 
 // Establece las cabeceras para permitir CORS y especificar el tipo de contenido JSON
 header("Access-Control-Allow-Origin: *");

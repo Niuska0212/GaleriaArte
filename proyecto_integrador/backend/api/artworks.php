@@ -1,5 +1,5 @@
 <?php
-// backend/api/artworks.php
+// proyecto_integrador/backend/api/artworks.php
 
 // Establece las cabeceras para permitir CORS y especificar el tipo de contenido JSON
 header("Access-Control-Allow-Origin: *"); // Permite peticiones desde cualquier origen (para desarrollo)

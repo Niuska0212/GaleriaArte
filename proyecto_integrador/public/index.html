@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galería de Arte - Inicio</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="js/app.js" defer></script>
+</head>
+<body>
+    <header class="main-header">
+        <div class="header-content">
+            <div class="logo">
+                <img src="img/logo.png" alt="Logo Galería de Arte" onerror="this.onerror=null;this.src='https://placehold.co/100x50/cccccc/333333?text=LOGO';" class="logo-img">
+                <h1>Galería de Arte</h1>
+            </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="index.html" class="nav-link active">Inicio</a></li>
+                    <li><a href="profile.html" class="nav-link">Mi Perfil</a></li>
+                    <li><a href="upload.html" class="nav-link">Subir Obra</a></li>
+                    <li><a href="login.html" class="nav-link">Login / Registro</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="search-section">
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Buscar obras o artistas..." class="search-input">
+                <button id="searchButton" class="search-button"><i class="fas fa-search"></i></button>
+            </div>
+            
+            <div class="filter-container">
+                <div class="filter-group">
+                    <label for="styleFilter">Estilo:</label>
+                    <select id="styleFilter" class="filter-select">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="artistFilter">Artista:</label>
+                    <select id="artistFilter" class="filter-select">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="sortBy">Ordenar por:</label>
+                    <select id="sortBy" class="filter-select">
+                        <option value="recent">Más recientes</option>
+                        <option value="popular">Más populares</option>
+                        <option value="title">Título (A-Z)</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <section class="gallery-info">
+            <div class="gallery-stats">
+                <span id="artworkCount">0</span> obras encontradas
+            </div>
+            <div class="view-options">
+                <button id="gridView" class="view-btn active"><i class="fas fa-th-large"></i></button>
+                <button id="listView" class="view-btn"><i class="fas fa-list"></i></button>
+            </div>
+        </section>
+
+        <section class="artworks-section">
+            <div id="artworksContainer" class="artworks-grid">
+                <!-- Las obras se cargarán aquí dinámicamente -->
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i> Cargando obras...
+                </div>
+            </div>
+            
+            <div id="pagination" class="pagination">
+                <!-- La paginación se generará dinámicamente -->
+            </div>
+        </section>
+    </main>
+
+    <footer class="main-footer">
+        <p>&copy; 2025 Galería de Arte. Todos los derechos reservados.</p>
+    </footer>
+</body>
+</html>

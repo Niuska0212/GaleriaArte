@@ -1,5 +1,5 @@
 <?php
-// backend/controllers/CommentController.php
+// proyecto_integrador/backend/controllers/CommentController.php
 
 // Ya no necesitamos requerir Database.php aquí, solo se usa la conexión PDO que se pasa.
 

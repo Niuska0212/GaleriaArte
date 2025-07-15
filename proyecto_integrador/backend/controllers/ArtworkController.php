@@ -1,7 +1,6 @@
 <?php
-// backend/controllers/ArtworkController.php
+// proyecto_integrador/backend/controllers/ArtworkController.php
 
-// Ya no necesitamos requerir Database.php aquí, solo se usa la conexión PDO que se pasa.
 
 class ArtworkController {
     private $conn;

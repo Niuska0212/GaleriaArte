@@ -1,5 +1,5 @@
 <?php
-// backend/controllers/AuthController.php
+// proyecto_integrador/backend/controllers/AuthController.php
 
 // Ya no necesitamos requerir Database.php aquí, solo se usa la conexión PDO que se pasa.
 
