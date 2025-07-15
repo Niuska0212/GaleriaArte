@@ -206,7 +206,7 @@ function addArtworkFunc(PDO $conn, $data, $file_data) {
     $file_extension = pathinfo($file_data['name'], PATHINFO_EXTENSION);
     $new_file_name = uniqid('artwork_', true) . '.' . $file_extension;
     $destination_path = UPLOAD_ARTWORK_DIR . $new_file_name; // Usar la constante
-    $image_url_for_db = 'public/img/uploaded_artworks/' . $new_file_name;
+    $image_url_for_db = 'img/uploaded_artworks/' . $new_file_name;
 
     if (!move_uploaded_file($file_data['tmp_name'], $destination_path)) {
         return ["success" => false, "message" => "No se pudo mover el archivo subido al directorio de destino. Verifique permisos."];

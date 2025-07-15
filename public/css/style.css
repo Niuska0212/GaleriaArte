@@ -220,12 +220,12 @@ img {
   margin-bottom: 40px;
 }
 
-.artwork-card {
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s, box-shadow 0.3s;
+.artwork-card img {
+    width: 100%;
+    height: 200px; 
+    object-fit: cover; 
+    display: block;
+    border-bottom: 1px solid #eee;
 }
 
 .artwork-card:hover {
