@@ -1,9 +1,10 @@
 <?php
-// proyecto_integrador/backend/config/database.php
-$host = "localhost";
-$dbname = "galeria_arte"; 
-$user = "root";
-$pass = ""; 
+
+$host = getenv('MYSQLHOST') ?: 'mysql.railway.internal' ; // O getenv('DB_HOST') si prefieres ese nombre
+$dbname = getenv('MYSQL_DATABASE') ?: 'railway' ; // O getenv('DB_NAME')
+$user = getenv('MYSQLUSER') ?: 'root' ; // O getenv('DB_USER')
+$pass = getenv('MYSQL_PASSWORD') ?: 'QeRgdiFiOXiYxLiUHgrlxZCTlGWBiUzJ' ; // O getenv('DB_PASSWORD')
+$port = getenv('MYSQLPORT') ?: '3306'; // O getenv('DB_PORT')
 
 try {
     $conn = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);
