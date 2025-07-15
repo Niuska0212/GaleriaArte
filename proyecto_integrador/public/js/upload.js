@@ -1,87 +1,214 @@
-// Define la URL base de tu API.
-// Asegúrate de que esta URL coincida con la forma en que accedes a tu proyecto en XAMPP.
-const BASE_API_URL = 'backend/api/'; // Ruta relativa desde la raíz del proyecto
-
-$(document).ready(function() {
-    console.log("upload.js cargado.");
-
-    const $uploadForm = $('#uploadForm');
-    const $uploadMessage = $('#uploadMessage');
-
-    // --- Función para mostrar mensajes ---
-    function showMessage(element, message, type = 'error') {
-        element.text(message).removeClass('success error').addClass(type).fadeIn(300);
-        setTimeout(() => {
-            element.fadeOut(300, function() {
-                $(this).empty();
-            });
-        }, 5000);
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadForm = document.getElementById('uploadForm');
+    const artworkImage = document.getElementById('artworkImage');
+    const uploadMessage = document.getElementById('uploadMessage');
+    
+    // Verificar autenticación
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html?redirect=upload.html';
+        return;
     }
-
-    // --- Función para verificar el estado de login ---
-    function isUserLoggedIn() {
-        return localStorage.getItem('userToken') !== null && localStorage.getItem('userId') !== null;
-    }
-
-    // --- Redirigir si no está logueado ---
-    if (!isUserLoggedIn()) {
-        showMessage($uploadMessage, 'Debes iniciar sesión para subir obras. Redirigiendo...', 'error');
-        setTimeout(() => {
-            window.location.href = 'login.html';
-        }, 2000);
-        return; // Detener la ejecución del script
-    }
-
-    // --- Manejo del Formulario de Subida ---
-    $uploadForm.on('submit', async function(event) {
-        event.preventDefault(); // Previene el envío tradicional del formulario
-
-        const userId = localStorage.getItem('userId');
-        const userToken = localStorage.getItem('userToken');
-
-        if (!userId || !userToken) {
-            showMessage($uploadMessage, 'Error de autenticación. Por favor, inicia sesión de nuevo.', 'error');
+    
+    // Configurar área de subida de archivos
+    setupFileUpload();
+    
+    // Event listener para el formulario
+    uploadForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Validar formulario
+        if (!validateForm()) {
             return;
         }
-
-        // Crear un objeto FormData para enviar los datos del formulario, incluyendo el archivo
+        
         const formData = new FormData(this);
-        formData.append('owner_id', userId); // Añadir el ID del usuario logueado
-        formData.append('action', 'upload_artwork'); // Indicar al backend la acción
-
-        // Deshabilitar botón y mostrar carga
-        const $submitButton = $(this).find('button[type="submit"]');
-        $submitButton.prop('disabled', true).text('Subiendo...');
-        $uploadMessage.empty();
-
+        const submitButton = this.querySelector('button[type="submit"]');
+        
+        // Deshabilitar botón durante el envío
+        submitButton.disabled = true;
+        submitButton.textContent = 'Subiendo...';
+        
         try {
-            const response = await fetch(BASE_API_URL + 'artworks.php', {
+            const response = await fetch('/backend/api/artworks.php', {
                 method: 'POST',
-                // No es necesario establecer 'Content-Type' para FormData, el navegador lo hace automáticamente
                 headers: {
-                    'Authorization': 'Bearer ' + userToken // Enviar el token de autenticación
+                    'Authorization': `Bearer ${token}`
                 },
-                body: formData // Enviar el objeto FormData
+                body: formData
             });
-
+            
             const data = await response.json();
-
-            if (response.ok) { // Si la respuesta HTTP es 2xx
-                showMessage($uploadMessage, data.message, 'success');
-                $uploadForm[0].reset(); // Limpiar el formulario
-                // Opcional: Redirigir a la página de detalle de la obra subida o a la galería
+            
+            if (data.success) {
+                showMessage(data.message, 'success');
+                uploadForm.reset();
+                resetFileInput();
+                
+                // Redirigir después de 2 segundos
                 setTimeout(() => {
-                    window.location.href = 'index.html'; // Redirigir a la galería
+                    window.location.href = `artwork.html?id=${data.artwork_id}`;
                 }, 2000);
             } else {
-                // Si la respuesta HTTP es un error (4xx, 5xx)
-                showMessage($uploadMessage, data.message || 'Error al subir la obra.', 'error');
+                showMessage(data.message, 'error');
             }
         } catch (error) {
-            console.error('Error de red o del servidor:', error);
-            showMessage($uploadMessage, 'Error de conexión. Inténtalo de nuevo más tarde.', 'error');
+            console.error('Error:', error);
+            showMessage('Error al subir la obra', 'error');
         } finally {
-            $submitButton.prop('disabled', false).text('Subir Obra');
+            submitButton.disabled = false;
+            submitButton.textContent = 'Subir Obra';
         }
     });
+    
+    // Funciones auxiliares
+    function setupFileUpload() {
+        const fileInputContainer = artworkImage.parentNode;
+        
+        // Crear elementos para la interfaz de arrastrar y soltar
+        const dropArea = document.createElement('div');
+        dropArea.className = 'drop-area';
+        dropArea.innerHTML = `
+            <div class="drop-content">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Arrastra tu imagen aquí o haz clic para seleccionar</p>
+                <small>Formatos aceptados: JPG, PNG, GIF. Tamaño máximo: 5MB</small>
+            </div>
+        `;
+        
+        const previewContainer = document.createElement('div');
+        previewContainer.className = 'preview-container';
+        
+        fileInputContainer.appendChild(dropArea);
+        fileInputContainer.appendChild(previewContainer);
+        
+        // Ocultar el input de archivo original
+        artworkImage.style.display = 'none';
+        
+        // Event listeners para el área de drop
+        dropArea.addEventListener('click', () => artworkImage.click());
+        
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.classList.add('dragover');
+        });
+        
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('dragover');
+        });
+        
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('dragover');
+            
+            if (e.dataTransfer.files.length) {
+                artworkImage.files = e.dataTransfer.files;
+                handleFileSelect(e.dataTransfer.files[0]);
+            }
+        });
+        
+        artworkImage.addEventListener('change', () => {
+            if (artworkImage.files.length) {
+                handleFileSelect(artworkImage.files[0]);
+            }
+        });
+    }
+    
+    function handleFileSelect(file) {
+        // Validar el archivo
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        
+        if (!validTypes.includes(file.type)) {
+            showMessage('Solo se permiten archivos JPG, PNG o GIF', 'error');
+            resetFileInput();
+            return;
+        }
+        
+        if (file.size > maxSize) {
+            showMessage('El tamaño máximo permitido es 5MB', 'error');
+            resetFileInput();
+            return;
+        }
+        
+        // Mostrar vista previa
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const previewContainer = document.querySelector('.preview-container');
+            previewContainer.innerHTML = `
+                <div class="preview-image">
+                    <img src="${e.target.result}" alt="Vista previa">
+                    <button class="remove-image-btn" title="Eliminar imagen">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            // Event listener para el botón de eliminar
+            document.querySelector('.remove-image-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                resetFileInput();
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+    
+    function resetFileInput() {
+        artworkImage.value = '';
+        document.querySelector('.preview-container').innerHTML = '';
+        document.querySelector('.drop-area').style.display = 'flex';
+    }
+    
+    function validateForm() {
+        let isValid = true;
+        const title = document.getElementById('artworkTitle').value.trim();
+        const artist = document.getElementById('artworkArtist').value.trim();
+        const image = artworkImage.files[0];
+        
+        // Limpiar errores anteriores
+        document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+        document.querySelectorAll('.error-message').forEach(el => el.remove());
+        
+        // Validar título
+        if (!title) {
+            markError('artworkTitle', 'El título es obligatorio');
+            isValid = false;
+        }
+        
+        // Validar artista
+        if (!artist) {
+            markError('artworkArtist', 'El nombre del artista es obligatorio');
+            isValid = false;
+        }
+        
+        // Validar imagen
+        if (!image) {
+            showMessage('Debes seleccionar una imagen', 'error');
+            isValid = false;
+        }
+        
+        return isValid;
+    }
+    
+    function markError(fieldId, message) {
+        const field = document.getElementById(fieldId);
+        const formGroup = field.closest('.form-group');
+        
+        formGroup.classList.add('error');
+        
+        const errorMessage = document.createElement('div');
+        errorMessage.className = 'error-message';
+        errorMessage.textContent = message;
+        formGroup.appendChild(errorMessage);
+    }
+    
+    function showMessage(message, type) {
+        uploadMessage.textContent = message;
+        uploadMessage.className = `message ${type}`;
+        uploadMessage.style.display = 'block';
+        
+        setTimeout(() => {
+            uploadMessage.style.display = 'none';
+        }, 3000);
+    }
 });
